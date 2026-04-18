@@ -114,7 +114,7 @@ Interface IBroadPhaseBatchedRayTester  <a class="header-action link-secondary" t
     <dt>Inherited Members</dt>
     <dd>
     <div>
-      <a class="xref" href="BepuPhysics.CollisionDetection.IBroadPhaseRayTester.html#BepuPhysics_CollisionDetection_IBroadPhaseRayTester_RayTest_BepuPhysics_Collidables_CollidableReference_BepuPhysics_Trees_RayData__System_Single__">IBroadPhaseRayTester.RayTest(CollidableReference, RayData*, float*)</a>
+      <a class="xref" href="BepuPhysics.CollisionDetection.IBroadPhaseRayTester.html#BepuPhysics_CollisionDetection_IBroadPhaseRayTester_RayTest_BepuPhysics_Collidables_CollidableReference_BepuPhysics_Trees_RayData__System_Single__BepuUtilities_Memory_BufferPool_">IBroadPhaseRayTester.RayTest(CollidableReference, RayData*, float*, BufferPool)</a>
     </div>
   </dd></dl>
 
@@ -129,8 +129,8 @@ Interface IBroadPhaseBatchedRayTester  <a class="header-action link-secondary" t
 
   <a id="BepuPhysics_CollisionDetection_IBroadPhaseBatchedRayTester_RayTest_" data-uid="BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.RayTest*"></a>
 
-  <h3 id="BepuPhysics_CollisionDetection_IBroadPhaseBatchedRayTester_RayTest_BepuPhysics_Collidables_CollidableReference_BepuPhysics_Trees_RaySource__" data-uid="BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.RayTest(BepuPhysics.Collidables.CollidableReference,BepuPhysics.Trees.RaySource@)">
-  RayTest(CollidableReference, ref RaySource)
+  <h3 id="BepuPhysics_CollisionDetection_IBroadPhaseBatchedRayTester_RayTest_BepuPhysics_Collidables_CollidableReference_BepuPhysics_Trees_RaySource__BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.RayTest(BepuPhysics.Collidables.CollidableReference,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool)">
+  RayTest(CollidableReference, ref RaySource, BufferPool)
   <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/RayBatchers.cs/#L16"><i class="bi bi-code-slash"></i></a>
   </h3>
 
@@ -138,7 +138,7 @@ Interface IBroadPhaseBatchedRayTester  <a class="header-action link-secondary" t
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">void RayTest(CollidableReference collidable, ref RaySource rays)</code></pre>
+    <pre><code class="lang-csharp hljs">void RayTest(CollidableReference collidable, ref RaySource rays, BufferPool pool)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -146,6 +146,8 @@ Interface IBroadPhaseBatchedRayTester  <a class="header-action link-secondary" t
     <dt><code>collidable</code> <a class="xref" href="BepuPhysics.Collidables.CollidableReference.html">CollidableReference</a></dt>
     <dd></dd>
     <dt><code>rays</code> <a class="xref" href="BepuPhysics.Trees.RaySource.html">RaySource</a></dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
     <dd></dd>
   </dl>
 

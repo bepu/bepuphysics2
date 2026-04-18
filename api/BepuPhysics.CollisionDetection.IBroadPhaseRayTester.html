@@ -122,8 +122,8 @@ Interface IBroadPhaseRayTester  <a class="header-action link-secondary" title="V
 
   <a id="BepuPhysics_CollisionDetection_IBroadPhaseRayTester_RayTest_" data-uid="BepuPhysics.CollisionDetection.IBroadPhaseRayTester.RayTest*"></a>
 
-  <h3 id="BepuPhysics_CollisionDetection_IBroadPhaseRayTester_RayTest_BepuPhysics_Collidables_CollidableReference_BepuPhysics_Trees_RayData__System_Single__" data-uid="BepuPhysics.CollisionDetection.IBroadPhaseRayTester.RayTest(BepuPhysics.Collidables.CollidableReference,BepuPhysics.Trees.RayData*,System.Single*)">
-  RayTest(CollidableReference, RayData*, float*)
+  <h3 id="BepuPhysics_CollisionDetection_IBroadPhaseRayTester_RayTest_BepuPhysics_Collidables_CollidableReference_BepuPhysics_Trees_RayData__System_Single__BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.CollisionDetection.IBroadPhaseRayTester.RayTest(BepuPhysics.Collidables.CollidableReference,BepuPhysics.Trees.RayData*,System.Single*,BepuUtilities.Memory.BufferPool)">
+  RayTest(CollidableReference, RayData*, float*, BufferPool)
   <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/RayBatchers.cs/#L12"><i class="bi bi-code-slash"></i></a>
   </h3>
 
@@ -131,7 +131,7 @@ Interface IBroadPhaseRayTester  <a class="header-action link-secondary" title="V
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">void RayTest(CollidableReference collidable, RayData* rayData, float* maximumT)</code></pre>
+    <pre><code class="lang-csharp hljs">void RayTest(CollidableReference collidable, RayData* rayData, float* maximumT, BufferPool pool)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -141,6 +141,8 @@ Interface IBroadPhaseRayTester  <a class="header-action link-secondary" title="V
     <dt><code>rayData</code> <a class="xref" href="BepuPhysics.Trees.RayData.html">RayData</a>*</dt>
     <dd></dd>
     <dt><code>maximumT</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a>*</dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
     <dd></dd>
   </dl>
 

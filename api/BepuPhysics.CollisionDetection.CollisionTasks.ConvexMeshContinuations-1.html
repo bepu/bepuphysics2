@@ -101,7 +101,7 @@ Struct ConvexMeshContinuations&lt;TMesh&gt;  <a class="header-action link-second
   <div class="markdown conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public struct ConvexMeshContinuations&lt;TMesh&gt; : IConvexCompoundContinuationHandler&lt;MeshReduction&gt; where TMesh : IHomogeneousCompoundShape&lt;Triangle, TriangleWide&gt;</code></pre>
+    <pre><code class="lang-csharp hljs">public struct ConvexMeshContinuations&lt;TMesh&gt; : IConvexCompoundContinuationHandler&lt;MeshReduction&gt; where TMesh : struct, IHomogeneousCompoundShape&lt;Triangle, TriangleWide&gt;</code></pre>
   </div>
 
 
@@ -192,7 +192,7 @@ Struct ConvexMeshContinuations&lt;TMesh&gt;  <a class="header-action link-second
 
   <h3 id="BepuPhysics_CollisionDetection_CollisionTasks_ConvexMeshContinuations_1_ConfigureContinuationChild__1_BepuPhysics_CollisionDetection_CollisionBatcher___0___BepuPhysics_CollisionDetection_MeshReduction__System_Int32_BepuPhysics_CollisionDetection_CollisionTasks_BoundsTestedPair__System_Int32_System_Int32_BepuPhysics_RigidPose__System_Int32__System_Void___" data-uid="BepuPhysics.CollisionDetection.CollisionTasks.ConvexMeshContinuations`1.ConfigureContinuationChild``1(BepuPhysics.CollisionDetection.CollisionBatcher{``0}@,BepuPhysics.CollisionDetection.MeshReduction@,System.Int32,BepuPhysics.CollisionDetection.CollisionTasks.BoundsTestedPair@,System.Int32,System.Int32,BepuPhysics.RigidPose@,System.Int32@,System.Void*@)">
   ConfigureContinuationChild&lt;TCallbacks&gt;(ref CollisionBatcher&lt;TCallbacks&gt;, ref MeshReduction, int, in BoundsTestedPair, int, int, out RigidPose, out int, out void*)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/CollisionTasks/ConvexMeshContinuations.cs/#L28"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/CollisionTasks/ConvexMeshContinuations.cs/#L29"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"></div>

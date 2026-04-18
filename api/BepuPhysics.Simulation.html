@@ -916,9 +916,9 @@ For example, if only type batches need to be resized, the solver's own functions
 
   <a id="BepuPhysics_Simulation_RayCast_" data-uid="BepuPhysics.Simulation.RayCast*"></a>
 
-  <h3 id="BepuPhysics_Simulation_RayCast__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Single___0__System_Int32_" data-uid="BepuPhysics.Simulation.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single,``0@,System.Int32)">
-  RayCast&lt;THitHandler&gt;(Vector3, Vector3, float, ref THitHandler, int)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L166"><i class="bi bi-code-slash"></i></a>
+  <h3 id="BepuPhysics_Simulation_RayCast__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool___0__System_Int32_" data-uid="BepuPhysics.Simulation.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,``0@,System.Int32)">
+  RayCast&lt;THitHandler&gt;(Vector3, Vector3, float, BufferPool, ref THitHandler, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L167"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Intersects a ray against the simulation.</p>
@@ -926,7 +926,7 @@ For example, if only type batches need to be resized, the solver's own functions
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public void RayCast&lt;THitHandler&gt;(Vector3 origin, Vector3 direction, float maximumT, ref THitHandler hitHandler, int id = 0) where THitHandler : IRayHitHandler</code></pre>
+    <pre><code class="lang-csharp hljs">public void RayCast&lt;THitHandler&gt;(Vector3 origin, Vector3 direction, float maximumT, BufferPool pool, ref THitHandler hitHandler, int id = 0) where THitHandler : IRayHitHandler</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -939,6 +939,9 @@ For example, if only type batches need to be resized, the solver's own functions
 </dd>
     <dt><code>maximumT</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
     <dd><p>Maximum length of the ray traversal in units of the direction's length.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for temporary allocations required by the test, if any.</p>
 </dd>
     <dt><code>hitHandler</code> <span class="xref">THitHandler</span></dt>
     <dd><p>callbacks to execute on ray-object intersections.</p>
@@ -1080,7 +1083,7 @@ For example, if only type batches need to be resized, the solver's own functions
 
   <h3 id="BepuPhysics_Simulation_Sweep__2___0_BepuPhysics_RigidPose__BepuPhysics_BodyVelocity__System_Single_BepuUtilities_Memory_BufferPool___1__System_Single_System_Single_System_Int32_" data-uid="BepuPhysics.Simulation.Sweep``2(``0,BepuPhysics.RigidPose@,BepuPhysics.BodyVelocity@,System.Single,BepuUtilities.Memory.BufferPool,``1@,System.Single,System.Single,System.Int32)">
   Sweep&lt;TShape, TSweepHitHandler&gt;(TShape, in RigidPose, in BodyVelocity, float, BufferPool, ref TSweepHitHandler, float, float, int)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L266"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L267"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Sweeps a shape against the simulation.</p>
@@ -1149,7 +1152,7 @@ For example, if only type batches need to be resized, the solver's own functions
 
   <h3 id="BepuPhysics_Simulation_Sweep__2___0__BepuPhysics_RigidPose__BepuPhysics_BodyVelocity__System_Single_BepuUtilities_Memory_BufferPool___1__" data-uid="BepuPhysics.Simulation.Sweep``2(``0@,BepuPhysics.RigidPose@,BepuPhysics.BodyVelocity@,System.Single,BepuUtilities.Memory.BufferPool,``1@)">
   Sweep&lt;TShape, TSweepHitHandler&gt;(in TShape, in RigidPose, in BodyVelocity, float, BufferPool, ref TSweepHitHandler)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L307"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Simulation_Queries.cs/#L308"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Sweeps a shape against the simulation.</p>

@@ -89,7 +89,7 @@
 
 
   <h1 id="BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3" data-uid="BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3" class="text-break">
-Class HomogeneousCompoundShapeBatch&lt;TShape, TChildShape, TChildShapeWide&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L296"><i class="bi bi-code-slash"></i></a>
+Class HomogeneousCompoundShapeBatch&lt;TShape, TChildShape, TChildShapeWide&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L315"><i class="bi bi-code-slash"></i></a>
   </h1>
 
   <div class="facts text-secondary">
@@ -230,7 +230,7 @@ Class HomogeneousCompoundShapeBatch&lt;TShape, TChildShape, TChildShapeWide&gt; 
 
   <h3 id="BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3__ctor_BepuUtilities_Memory_BufferPool_System_Int32_" data-uid="BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.#ctor(BepuUtilities.Memory.BufferPool,System.Int32)">
   HomogeneousCompoundShapeBatch(BufferPool, int)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L300"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L319"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"></div>
@@ -267,7 +267,7 @@ Class HomogeneousCompoundShapeBatch&lt;TShape, TChildShape, TChildShapeWide&gt; 
 
   <h3 id="BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_ComputeBounds_BepuPhysics_BoundingBoxBatcher__" data-uid="BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.ComputeBounds(BepuPhysics.BoundingBoxBatcher@)">
   ComputeBounds(ref BoundingBoxBatcher)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L315"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L334"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"></div>
@@ -298,7 +298,7 @@ Class HomogeneousCompoundShapeBatch&lt;TShape, TChildShape, TChildShapeWide&gt; 
 
   <h3 id="BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_ComputeBounds_System_Int32_System_Numerics_Quaternion_System_Numerics_Vector3__System_Numerics_Vector3__" data-uid="BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.ComputeBounds(System.Int32,System.Numerics.Quaternion,System.Numerics.Vector3@,System.Numerics.Vector3@)">
   ComputeBounds(int, Quaternion, out Vector3, out Vector3)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L320"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L339"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"></div>
@@ -335,7 +335,7 @@ Class HomogeneousCompoundShapeBatch&lt;TShape, TChildShape, TChildShapeWide&gt; 
 
   <h3 id="BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_Dispose_System_Int32_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.Dispose(System.Int32,BepuUtilities.Memory.BufferPool)">
   Dispose(int, BufferPool)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L305"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L324"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"></div>
@@ -366,37 +366,47 @@ Class HomogeneousCompoundShapeBatch&lt;TShape, TChildShape, TChildShapeWide&gt; 
 
   <a id="BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_RayTest_" data-uid="BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest*"></a>
 
-  <h3 id="BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single____0__" data-uid="BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)">
-  RayTest&lt;TRayHitHandler&gt;(int, in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L324"><i class="bi bi-code-slash"></i></a>
+  <h3 id="BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuUtilities_Memory_BufferPool___0__" data-uid="BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)">
+  RayTest&lt;TRayHitHandler&gt;(int, in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L343"><i class="bi bi-code-slash"></i></a>
   </h3>
 
-  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 summary"><p>Tests a ray against a shape in the batch.</p>
+</div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public override void RayTest&lt;TRayHitHandler&gt;(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
+    <pre><code class="lang-csharp hljs">public override void RayTest&lt;TRayHitHandler&gt;(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>shapeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd></dd>
+    <dd><p>Index of the shape in the batch to test.</p>
+</dd>
     <dt><code>pose</code> <a class="xref" href="BepuPhysics.RigidPose.html">RigidPose</a></dt>
-    <dd></dd>
+    <dd><p>Pose of the shape to use for the test.</p>
+</dd>
     <dt><code>ray</code> <a class="xref" href="BepuPhysics.Trees.RayData.html">RayData</a></dt>
-    <dd></dd>
+    <dd><p>Ray to test against the shape.</p>
+</dd>
     <dt><code>maximumT</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
-    <dd></dd>
+    <dd><p>The maximum parametric distance along the line. May be mutated by the hit handler.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for temporary allocations required by the test, if any.</p>
+</dd>
     <dt><code>hitHandler</code> <span class="xref">TRayHitHandler</span></dt>
-    <dd></dd>
+    <dd><p>Hit handler that will process the reported hits.</p>
+</dd>
   </dl>
 
 
   <h4 class="section">Type Parameters</h4>
   <dl class="parameters">
     <dt><code>TRayHitHandler</code></dt>
-    <dd></dd>
+    <dd><p>Type of the hit handler that will have results reported to it.</p>
+</dd>
   </dl>
 
 
@@ -410,35 +420,44 @@ Class HomogeneousCompoundShapeBatch&lt;TShape, TChildShape, TChildShapeWide&gt; 
 
   <a id="BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_RayTest_" data-uid="BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest*"></a>
 
-  <h3 id="BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource____0__" data-uid="BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)">
-  RayTest&lt;TRayHitHandler&gt;(int, in RigidPose, ref RaySource, ref TRayHitHandler)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L329"><i class="bi bi-code-slash"></i></a>
+  <h3 id="BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuUtilities_Memory_BufferPool___0__" data-uid="BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)">
+  RayTest&lt;TRayHitHandler&gt;(int, in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L348"><i class="bi bi-code-slash"></i></a>
   </h3>
 
-  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 summary"><p>Tests a bunch of rays against a shape in the batch.</p>
+</div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public override void RayTest&lt;TRayHitHandler&gt;(int shapeIndex, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
+    <pre><code class="lang-csharp hljs">public override void RayTest&lt;TRayHitHandler&gt;(int shapeIndex, in RigidPose pose, ref RaySource rays, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>shapeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd></dd>
+    <dd><p>Index of the shape in the batch to test.</p>
+</dd>
     <dt><code>pose</code> <a class="xref" href="BepuPhysics.RigidPose.html">RigidPose</a></dt>
-    <dd></dd>
+    <dd><p>Pose of the shape to use for the test.</p>
+</dd>
     <dt><code>rays</code> <a class="xref" href="BepuPhysics.Trees.RaySource.html">RaySource</a></dt>
-    <dd></dd>
+    <dd><p>Rays to test against the shape.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for temporary allocations required by the test, if any.</p>
+</dd>
     <dt><code>hitHandler</code> <span class="xref">TRayHitHandler</span></dt>
-    <dd></dd>
+    <dd><p>Hit handler that will process the reported hits.</p>
+</dd>
   </dl>
 
 
   <h4 class="section">Type Parameters</h4>
   <dl class="parameters">
     <dt><code>TRayHitHandler</code></dt>
-    <dd></dd>
+    <dd><p>Type of the hit handler that will have results reported to it.</p>
+</dd>
   </dl>
 
 
@@ -454,7 +473,7 @@ Class HomogeneousCompoundShapeBatch&lt;TShape, TChildShape, TChildShapeWide&gt; 
 
   <h3 id="BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_RemoveAndDisposeChildren_System_Int32_BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RemoveAndDisposeChildren(System.Int32,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool)">
   RemoveAndDisposeChildren(int, Shapes, BufferPool)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L310"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L329"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"></div>
@@ -489,7 +508,7 @@ Class HomogeneousCompoundShapeBatch&lt;TShape, TChildShape, TChildShapeWide&gt; 
 </article>
 
         <div class="contribution d-print-none">
-          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L296" class="edit-link">Edit this page</a>
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L315" class="edit-link">Edit this page</a>
         </div>
 
 

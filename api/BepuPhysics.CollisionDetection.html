@@ -145,6 +145,13 @@ Classes
 </dd>
     </dl>
     <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.MeshReductionThunks-1.html">MeshReductionThunks&lt;TMesh&gt;</a></dt>
+      <dd><p>Type-specialized thunks that bridge MeshReduction's type-erased function pointer fields back to a concrete mesh shape type.
+The static fields here are populated once per closed TMesh by the runtime, and the JIT specializes the bodies so that
+the calls into <code class="typeparamref">TMesh</code> are devirtualized.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
       <dt><a class="xref" href="BepuPhysics.CollisionDetection.NarrowPhase.html">NarrowPhase</a></dt>
       <dd></dd>
     </dl>
@@ -297,6 +304,10 @@ Structs
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="BepuPhysics.CollisionDetection.MeshReduction.html">MeshReduction</a></dt>
+      <dd></dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.html">MeshReduction.ChildEnumerator</a></dt>
       <dd></dd>
     </dl>
     <dl class="jumplist">

@@ -2968,6 +2968,15 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.Collidables.BigCompound.FindLocalOverlaps
   nameWithType: BigCompound.FindLocalOverlaps
+- uid: BepuPhysics.Collidables.BigCompound.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,``0@)
+  name: FindLocalOverlaps<TEnumerator>(Vector3, Vector3, BufferPool, Shapes, ref TEnumerator)
+  href: api/BepuPhysics.Collidables.BigCompound.html#BepuPhysics_Collidables_BigCompound_FindLocalOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes___0__
+  commentId: M:BepuPhysics.Collidables.BigCompound.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,``0@)
+  name.vb: FindLocalOverlaps(Of TEnumerator)(Vector3, Vector3, BufferPool, Shapes, TEnumerator)
+  fullName: BepuPhysics.Collidables.BigCompound.FindLocalOverlaps<TEnumerator>(System.Numerics.Vector3, System.Numerics.Vector3, BepuUtilities.Memory.BufferPool, BepuPhysics.Collidables.Shapes, ref TEnumerator)
+  fullName.vb: BepuPhysics.Collidables.BigCompound.FindLocalOverlaps(Of TEnumerator)(System.Numerics.Vector3, System.Numerics.Vector3, BepuUtilities.Memory.BufferPool, BepuPhysics.Collidables.Shapes, TEnumerator)
+  nameWithType: BigCompound.FindLocalOverlaps<TEnumerator>(Vector3, Vector3, BufferPool, Shapes, ref TEnumerator)
+  nameWithType.vb: BigCompound.FindLocalOverlaps(Of TEnumerator)(Vector3, Vector3, BufferPool, Shapes, TEnumerator)
 - uid: BepuPhysics.Collidables.BigCompound.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,System.Void*)
   name: FindLocalOverlaps<TOverlaps>(Vector3, Vector3, Vector3, float, BufferPool, Shapes, void*)
   href: api/BepuPhysics.Collidables.BigCompound.html#BepuPhysics_Collidables_BigCompound_FindLocalOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes_System_Void__
@@ -3015,24 +3024,24 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.Collidables.BigCompound.RayTest
   nameWithType: BigCompound.RayTest
-- uid: BepuPhysics.Collidables.BigCompound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,``0@)
-  name: RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, Shapes, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.BigCompound.html#BepuPhysics_Collidables_BigCompound_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuPhysics_Collidables_Shapes___0__
-  commentId: M:BepuPhysics.Collidables.BigCompound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, Shapes, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.BigCompound.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, BepuPhysics.Collidables.Shapes, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.BigCompound.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, BepuPhysics.Collidables.Shapes, TRayHitHandler)
-  nameWithType: BigCompound.RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, Shapes, ref TRayHitHandler)
-  nameWithType.vb: BigCompound.RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, Shapes, TRayHitHandler)
-- uid: BepuPhysics.Collidables.BigCompound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,``0@)
-  name: RayTest<TRayHitHandler>(in RigidPose, ref RaySource, Shapes, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.BigCompound.html#BepuPhysics_Collidables_BigCompound_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuPhysics_Collidables_Shapes___0__
-  commentId: M:BepuPhysics.Collidables.BigCompound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RaySource, Shapes, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.BigCompound.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, BepuPhysics.Collidables.Shapes, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.BigCompound.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, BepuPhysics.Collidables.Shapes, TRayHitHandler)
-  nameWithType: BigCompound.RayTest<TRayHitHandler>(in RigidPose, ref RaySource, Shapes, ref TRayHitHandler)
-  nameWithType.vb: BigCompound.RayTest(Of TRayHitHandler)(RigidPose, RaySource, Shapes, TRayHitHandler)
+- uid: BepuPhysics.Collidables.BigCompound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, Shapes, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.BigCompound.html#BepuPhysics_Collidables_BigCompound_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.BigCompound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, Shapes, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.BigCompound.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.BigCompound.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: BigCompound.RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, Shapes, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: BigCompound.RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, Shapes, BufferPool, TRayHitHandler)
+- uid: BepuPhysics.Collidables.BigCompound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(in RigidPose, ref RaySource, Shapes, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.BigCompound.html#BepuPhysics_Collidables_BigCompound_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.BigCompound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RaySource, Shapes, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.BigCompound.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.BigCompound.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: BigCompound.RayTest<TRayHitHandler>(in RigidPose, ref RaySource, Shapes, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: BigCompound.RayTest(Of TRayHitHandler)(RigidPose, RaySource, Shapes, BufferPool, TRayHitHandler)
 - uid: BepuPhysics.Collidables.BigCompound.RemoveAt(System.Int32,BepuUtilities.Memory.BufferPool)
   name: RemoveAt(int, BufferPool)
   href: api/BepuPhysics.Collidables.BigCompound.html#BepuPhysics_Collidables_BigCompound_RemoveAt_System_Int32_BepuUtilities_Memory_BufferPool_
@@ -4286,14 +4295,14 @@ references:
   fullName.vb: BepuPhysics.Collidables.Compound.AddChildBoundsToBatcher(BepuPhysics.BoundingBoxBatcher, BepuPhysics.RigidPose, BepuPhysics.BodyVelocity, Integer)
   nameWithType: Compound.AddChildBoundsToBatcher(ref BoundingBoxBatcher, in RigidPose, in BodyVelocity, int)
   nameWithType.vb: Compound.AddChildBoundsToBatcher(BoundingBoxBatcher, RigidPose, BodyVelocity, Integer)
-- uid: BepuPhysics.Collidables.Compound.AddChildBoundsToBatcher(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.CompoundChild}@,BepuPhysics.BoundingBoxBatcher@,BepuPhysics.RigidPose@,BepuPhysics.BodyVelocity@,System.Int32)
-  name: AddChildBoundsToBatcher(ref Buffer<CompoundChild>, ref BoundingBoxBatcher, in RigidPose, in BodyVelocity, int)
-  href: api/BepuPhysics.Collidables.Compound.html#BepuPhysics_Collidables_Compound_AddChildBoundsToBatcher_BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_CompoundChild___BepuPhysics_BoundingBoxBatcher__BepuPhysics_RigidPose__BepuPhysics_BodyVelocity__System_Int32_
-  commentId: M:BepuPhysics.Collidables.Compound.AddChildBoundsToBatcher(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.CompoundChild}@,BepuPhysics.BoundingBoxBatcher@,BepuPhysics.RigidPose@,BepuPhysics.BodyVelocity@,System.Int32)
+- uid: BepuPhysics.Collidables.Compound.AddChildBoundsToBatcher(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.CompoundChild},BepuPhysics.BoundingBoxBatcher@,BepuPhysics.RigidPose@,BepuPhysics.BodyVelocity@,System.Int32)
+  name: AddChildBoundsToBatcher(Buffer<CompoundChild>, ref BoundingBoxBatcher, in RigidPose, in BodyVelocity, int)
+  href: api/BepuPhysics.Collidables.Compound.html#BepuPhysics_Collidables_Compound_AddChildBoundsToBatcher_BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_CompoundChild__BepuPhysics_BoundingBoxBatcher__BepuPhysics_RigidPose__BepuPhysics_BodyVelocity__System_Int32_
+  commentId: M:BepuPhysics.Collidables.Compound.AddChildBoundsToBatcher(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.CompoundChild},BepuPhysics.BoundingBoxBatcher@,BepuPhysics.RigidPose@,BepuPhysics.BodyVelocity@,System.Int32)
   name.vb: AddChildBoundsToBatcher(Buffer(Of CompoundChild), BoundingBoxBatcher, RigidPose, BodyVelocity, Integer)
-  fullName: BepuPhysics.Collidables.Compound.AddChildBoundsToBatcher(ref BepuUtilities.Memory.Buffer<BepuPhysics.Collidables.CompoundChild>, ref BepuPhysics.BoundingBoxBatcher, in BepuPhysics.RigidPose, in BepuPhysics.BodyVelocity, int)
+  fullName: BepuPhysics.Collidables.Compound.AddChildBoundsToBatcher(BepuUtilities.Memory.Buffer<BepuPhysics.Collidables.CompoundChild>, ref BepuPhysics.BoundingBoxBatcher, in BepuPhysics.RigidPose, in BepuPhysics.BodyVelocity, int)
   fullName.vb: BepuPhysics.Collidables.Compound.AddChildBoundsToBatcher(BepuUtilities.Memory.Buffer(Of BepuPhysics.Collidables.CompoundChild), BepuPhysics.BoundingBoxBatcher, BepuPhysics.RigidPose, BepuPhysics.BodyVelocity, Integer)
-  nameWithType: Compound.AddChildBoundsToBatcher(ref Buffer<CompoundChild>, ref BoundingBoxBatcher, in RigidPose, in BodyVelocity, int)
+  nameWithType: Compound.AddChildBoundsToBatcher(Buffer<CompoundChild>, ref BoundingBoxBatcher, in RigidPose, in BodyVelocity, int)
   nameWithType.vb: Compound.AddChildBoundsToBatcher(Buffer(Of CompoundChild), BoundingBoxBatcher, RigidPose, BodyVelocity, Integer)
 - uid: BepuPhysics.Collidables.Compound.AddChildBoundsToBatcher*
   name: AddChildBoundsToBatcher
@@ -4414,6 +4423,15 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.Collidables.Compound.FindLocalOverlaps
   nameWithType: Compound.FindLocalOverlaps
+- uid: BepuPhysics.Collidables.Compound.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,``0@)
+  name: FindLocalOverlaps<TEnumerator>(Vector3, Vector3, BufferPool, Shapes, ref TEnumerator)
+  href: api/BepuPhysics.Collidables.Compound.html#BepuPhysics_Collidables_Compound_FindLocalOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes___0__
+  commentId: M:BepuPhysics.Collidables.Compound.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,``0@)
+  name.vb: FindLocalOverlaps(Of TEnumerator)(Vector3, Vector3, BufferPool, Shapes, TEnumerator)
+  fullName: BepuPhysics.Collidables.Compound.FindLocalOverlaps<TEnumerator>(System.Numerics.Vector3, System.Numerics.Vector3, BepuUtilities.Memory.BufferPool, BepuPhysics.Collidables.Shapes, ref TEnumerator)
+  fullName.vb: BepuPhysics.Collidables.Compound.FindLocalOverlaps(Of TEnumerator)(System.Numerics.Vector3, System.Numerics.Vector3, BepuUtilities.Memory.BufferPool, BepuPhysics.Collidables.Shapes, TEnumerator)
+  nameWithType: Compound.FindLocalOverlaps<TEnumerator>(Vector3, Vector3, BufferPool, Shapes, ref TEnumerator)
+  nameWithType.vb: Compound.FindLocalOverlaps(Of TEnumerator)(Vector3, Vector3, BufferPool, Shapes, TEnumerator)
 - uid: BepuPhysics.Collidables.Compound.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,System.Void*)
   name: FindLocalOverlaps<TOverlaps>(Vector3, Vector3, Vector3, float, BufferPool, Shapes, void*)
   href: api/BepuPhysics.Collidables.Compound.html#BepuPhysics_Collidables_Compound_FindLocalOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes_System_Void__
@@ -4529,24 +4547,24 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.Collidables.Compound.RayTest
   nameWithType: Compound.RayTest
-- uid: BepuPhysics.Collidables.Compound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,``0@)
-  name: RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, Shapes, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.Compound.html#BepuPhysics_Collidables_Compound_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuPhysics_Collidables_Shapes___0__
-  commentId: M:BepuPhysics.Collidables.Compound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, Shapes, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.Compound.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, BepuPhysics.Collidables.Shapes, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.Compound.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, BepuPhysics.Collidables.Shapes, TRayHitHandler)
-  nameWithType: Compound.RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, Shapes, ref TRayHitHandler)
-  nameWithType.vb: Compound.RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, Shapes, TRayHitHandler)
-- uid: BepuPhysics.Collidables.Compound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,``0@)
-  name: RayTest<TRayHitHandler>(in RigidPose, ref RaySource, Shapes, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.Compound.html#BepuPhysics_Collidables_Compound_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuPhysics_Collidables_Shapes___0__
-  commentId: M:BepuPhysics.Collidables.Compound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RaySource, Shapes, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.Compound.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, BepuPhysics.Collidables.Shapes, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.Compound.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, BepuPhysics.Collidables.Shapes, TRayHitHandler)
-  nameWithType: Compound.RayTest<TRayHitHandler>(in RigidPose, ref RaySource, Shapes, ref TRayHitHandler)
-  nameWithType.vb: Compound.RayTest(Of TRayHitHandler)(RigidPose, RaySource, Shapes, TRayHitHandler)
+- uid: BepuPhysics.Collidables.Compound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, Shapes, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.Compound.html#BepuPhysics_Collidables_Compound_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.Compound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, Shapes, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.Compound.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.Compound.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: Compound.RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, Shapes, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: Compound.RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, Shapes, BufferPool, TRayHitHandler)
+- uid: BepuPhysics.Collidables.Compound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(in RigidPose, ref RaySource, Shapes, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.Compound.html#BepuPhysics_Collidables_Compound_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.Compound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RaySource, Shapes, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.Compound.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.Compound.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: Compound.RayTest<TRayHitHandler>(in RigidPose, ref RaySource, Shapes, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: Compound.RayTest(Of TRayHitHandler)(RigidPose, RaySource, Shapes, BufferPool, TRayHitHandler)
 - uid: BepuPhysics.Collidables.Compound.RemoveAt(System.Int32,BepuUtilities.Memory.BufferPool)
   name: RemoveAt(int, BufferPool)
   href: api/BepuPhysics.Collidables.Compound.html#BepuPhysics_Collidables_Compound_RemoveAt_System_Int32_BepuUtilities_Memory_BufferPool_
@@ -5103,24 +5121,24 @@ references:
   fullName.vb: BepuPhysics.Collidables.CompoundShapeBatch(Of TShape).RayTest
   nameWithType: CompoundShapeBatch<TShape>.RayTest
   nameWithType.vb: CompoundShapeBatch(Of TShape).RayTest
-- uid: BepuPhysics.Collidables.CompoundShapeBatch`1.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)
-  name: RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.CompoundShapeBatch-1.html#BepuPhysics_Collidables_CompoundShapeBatch_1_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single____0__
-  commentId: M:BepuPhysics.Collidables.CompoundShapeBatch`1.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.CompoundShapeBatch<TShape>.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.CompoundShapeBatch(Of TShape).RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, TRayHitHandler)
-  nameWithType: CompoundShapeBatch<TShape>.RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  nameWithType.vb: CompoundShapeBatch(Of TShape).RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, TRayHitHandler)
-- uid: BepuPhysics.Collidables.CompoundShapeBatch`1.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)
-  name: RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.CompoundShapeBatch-1.html#BepuPhysics_Collidables_CompoundShapeBatch_1_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource____0__
-  commentId: M:BepuPhysics.Collidables.CompoundShapeBatch`1.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.CompoundShapeBatch<TShape>.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.CompoundShapeBatch(Of TShape).RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, TRayHitHandler)
-  nameWithType: CompoundShapeBatch<TShape>.RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, ref TRayHitHandler)
-  nameWithType.vb: CompoundShapeBatch(Of TShape).RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, TRayHitHandler)
+- uid: BepuPhysics.Collidables.CompoundShapeBatch`1.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.CompoundShapeBatch-1.html#BepuPhysics_Collidables_CompoundShapeBatch_1_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.CompoundShapeBatch`1.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.CompoundShapeBatch<TShape>.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.CompoundShapeBatch(Of TShape).RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: CompoundShapeBatch<TShape>.RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: CompoundShapeBatch(Of TShape).RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, BufferPool, TRayHitHandler)
+- uid: BepuPhysics.Collidables.CompoundShapeBatch`1.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.CompoundShapeBatch-1.html#BepuPhysics_Collidables_CompoundShapeBatch_1_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.CompoundShapeBatch`1.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.CompoundShapeBatch<TShape>.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.CompoundShapeBatch(Of TShape).RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: CompoundShapeBatch<TShape>.RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: CompoundShapeBatch(Of TShape).RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, BufferPool, TRayHitHandler)
 - uid: BepuPhysics.Collidables.CompoundShapeBatch`1.RemoveAndDisposeChildren(System.Int32,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool)
   name: RemoveAndDisposeChildren(int, Shapes, BufferPool)
   href: api/BepuPhysics.Collidables.CompoundShapeBatch-1.html#BepuPhysics_Collidables_CompoundShapeBatch_1_RemoveAndDisposeChildren_System_Int32_BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool_
@@ -6016,24 +6034,24 @@ references:
   fullName.vb: BepuPhysics.Collidables.ConvexShapeBatch(Of TShape, TShapeWide).RayTest
   nameWithType: ConvexShapeBatch<TShape, TShapeWide>.RayTest
   nameWithType.vb: ConvexShapeBatch(Of TShape, TShapeWide).RayTest
-- uid: BepuPhysics.Collidables.ConvexShapeBatch`2.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)
-  name: RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.ConvexShapeBatch-2.html#BepuPhysics_Collidables_ConvexShapeBatch_2_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single____0__
-  commentId: M:BepuPhysics.Collidables.ConvexShapeBatch`2.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.ConvexShapeBatch<TShape, TShapeWide>.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.ConvexShapeBatch(Of TShape, TShapeWide).RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, TRayHitHandler)
-  nameWithType: ConvexShapeBatch<TShape, TShapeWide>.RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  nameWithType.vb: ConvexShapeBatch(Of TShape, TShapeWide).RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, TRayHitHandler)
-- uid: BepuPhysics.Collidables.ConvexShapeBatch`2.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)
-  name: RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.ConvexShapeBatch-2.html#BepuPhysics_Collidables_ConvexShapeBatch_2_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource____0__
-  commentId: M:BepuPhysics.Collidables.ConvexShapeBatch`2.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.ConvexShapeBatch<TShape, TShapeWide>.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.ConvexShapeBatch(Of TShape, TShapeWide).RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, TRayHitHandler)
-  nameWithType: ConvexShapeBatch<TShape, TShapeWide>.RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, ref TRayHitHandler)
-  nameWithType.vb: ConvexShapeBatch(Of TShape, TShapeWide).RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, TRayHitHandler)
+- uid: BepuPhysics.Collidables.ConvexShapeBatch`2.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.ConvexShapeBatch-2.html#BepuPhysics_Collidables_ConvexShapeBatch_2_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.ConvexShapeBatch`2.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.ConvexShapeBatch<TShape, TShapeWide>.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.ConvexShapeBatch(Of TShape, TShapeWide).RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: ConvexShapeBatch<TShape, TShapeWide>.RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: ConvexShapeBatch(Of TShape, TShapeWide).RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, BufferPool, TRayHitHandler)
+- uid: BepuPhysics.Collidables.ConvexShapeBatch`2.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.ConvexShapeBatch-2.html#BepuPhysics_Collidables_ConvexShapeBatch_2_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.ConvexShapeBatch`2.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.ConvexShapeBatch<TShape, TShapeWide>.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.ConvexShapeBatch(Of TShape, TShapeWide).RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: ConvexShapeBatch<TShape, TShapeWide>.RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: ConvexShapeBatch(Of TShape, TShapeWide).RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, BufferPool, TRayHitHandler)
 - uid: BepuPhysics.Collidables.ConvexShapeBatch`2.RemoveAndDisposeChildren(System.Int32,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool)
   name: RemoveAndDisposeChildren(int, Shapes, BufferPool)
   href: api/BepuPhysics.Collidables.ConvexShapeBatch-2.html#BepuPhysics_Collidables_ConvexShapeBatch_2_RemoveAndDisposeChildren_System_Int32_BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool_
@@ -6503,24 +6521,24 @@ references:
   fullName.vb: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch(Of TShape, TChildShape, TChildShapeWide).RayTest
   nameWithType: HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide>.RayTest
   nameWithType.vb: HomogeneousCompoundShapeBatch(Of TShape, TChildShape, TChildShapeWide).RayTest
-- uid: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)
-  name: RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.HomogeneousCompoundShapeBatch-3.html#BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single____0__
-  commentId: M:BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch(Of TShape, TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, TRayHitHandler)
-  nameWithType: HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  nameWithType.vb: HomogeneousCompoundShapeBatch(Of TShape, TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, TRayHitHandler)
-- uid: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)
-  name: RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.HomogeneousCompoundShapeBatch-3.html#BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource____0__
-  commentId: M:BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch(Of TShape, TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, TRayHitHandler)
-  nameWithType: HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, ref TRayHitHandler)
-  nameWithType.vb: HomogeneousCompoundShapeBatch(Of TShape, TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, TRayHitHandler)
+- uid: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.HomogeneousCompoundShapeBatch-3.html#BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch(Of TShape, TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: HomogeneousCompoundShapeBatch(Of TShape, TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, BufferPool, TRayHitHandler)
+- uid: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.HomogeneousCompoundShapeBatch-3.html#BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch(Of TShape, TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: HomogeneousCompoundShapeBatch(Of TShape, TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, BufferPool, TRayHitHandler)
 - uid: BepuPhysics.Collidables.HomogeneousCompoundShapeBatch`3.RemoveAndDisposeChildren(System.Int32,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool)
   name: RemoveAndDisposeChildren(int, Shapes, BufferPool)
   href: api/BepuPhysics.Collidables.HomogeneousCompoundShapeBatch-3.html#BepuPhysics_Collidables_HomogeneousCompoundShapeBatch_3_RemoveAndDisposeChildren_System_Int32_BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool_
@@ -6765,24 +6783,24 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.Collidables.ICompoundShape.RayTest
   nameWithType: ICompoundShape.RayTest
-- uid: BepuPhysics.Collidables.ICompoundShape.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,``0@)
-  name: RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, Shapes, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.ICompoundShape.html#BepuPhysics_Collidables_ICompoundShape_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuPhysics_Collidables_Shapes___0__
-  commentId: M:BepuPhysics.Collidables.ICompoundShape.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, Shapes, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.ICompoundShape.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, BepuPhysics.Collidables.Shapes, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.ICompoundShape.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, BepuPhysics.Collidables.Shapes, TRayHitHandler)
-  nameWithType: ICompoundShape.RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, Shapes, ref TRayHitHandler)
-  nameWithType.vb: ICompoundShape.RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, Shapes, TRayHitHandler)
-- uid: BepuPhysics.Collidables.ICompoundShape.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,``0@)
-  name: RayTest<TRayHitHandler>(in RigidPose, ref RaySource, Shapes, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.ICompoundShape.html#BepuPhysics_Collidables_ICompoundShape_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuPhysics_Collidables_Shapes___0__
-  commentId: M:BepuPhysics.Collidables.ICompoundShape.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RaySource, Shapes, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.ICompoundShape.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, BepuPhysics.Collidables.Shapes, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.ICompoundShape.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, BepuPhysics.Collidables.Shapes, TRayHitHandler)
-  nameWithType: ICompoundShape.RayTest<TRayHitHandler>(in RigidPose, ref RaySource, Shapes, ref TRayHitHandler)
-  nameWithType.vb: ICompoundShape.RayTest(Of TRayHitHandler)(RigidPose, RaySource, Shapes, TRayHitHandler)
+- uid: BepuPhysics.Collidables.ICompoundShape.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, Shapes, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.ICompoundShape.html#BepuPhysics_Collidables_ICompoundShape_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.ICompoundShape.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, Shapes, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.ICompoundShape.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.ICompoundShape.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: ICompoundShape.RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, Shapes, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: ICompoundShape.RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, Shapes, BufferPool, TRayHitHandler)
+- uid: BepuPhysics.Collidables.ICompoundShape.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(in RigidPose, ref RaySource, Shapes, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.ICompoundShape.html#BepuPhysics_Collidables_ICompoundShape_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.ICompoundShape.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RaySource, Shapes, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.ICompoundShape.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.ICompoundShape.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: ICompoundShape.RayTest<TRayHitHandler>(in RigidPose, ref RaySource, Shapes, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: ICompoundShape.RayTest(Of TRayHitHandler)(RigidPose, RaySource, Shapes, BufferPool, TRayHitHandler)
 - uid: BepuPhysics.Collidables.IConvexShape
   name: IConvexShape
   href: api/BepuPhysics.Collidables.IConvexShape.html
@@ -6992,24 +7010,24 @@ references:
   fullName.vb: BepuPhysics.Collidables.IHomogeneousCompoundShape(Of TChildShape, TChildShapeWide).RayTest
   nameWithType: IHomogeneousCompoundShape<TChildShape, TChildShapeWide>.RayTest
   nameWithType.vb: IHomogeneousCompoundShape(Of TChildShape, TChildShapeWide).RayTest
-- uid: BepuPhysics.Collidables.IHomogeneousCompoundShape`2.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)
-  name: RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.IHomogeneousCompoundShape-2.html#BepuPhysics_Collidables_IHomogeneousCompoundShape_2_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single____0__
-  commentId: M:BepuPhysics.Collidables.IHomogeneousCompoundShape`2.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.IHomogeneousCompoundShape<TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.IHomogeneousCompoundShape(Of TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, TRayHitHandler)
-  nameWithType: IHomogeneousCompoundShape<TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  nameWithType.vb: IHomogeneousCompoundShape(Of TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, TRayHitHandler)
-- uid: BepuPhysics.Collidables.IHomogeneousCompoundShape`2.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)
-  name: RayTest<TRayHitHandler>(in RigidPose, ref RaySource, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.IHomogeneousCompoundShape-2.html#BepuPhysics_Collidables_IHomogeneousCompoundShape_2_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource____0__
-  commentId: M:BepuPhysics.Collidables.IHomogeneousCompoundShape`2.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RaySource, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.IHomogeneousCompoundShape<TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.IHomogeneousCompoundShape(Of TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, TRayHitHandler)
-  nameWithType: IHomogeneousCompoundShape<TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(in RigidPose, ref RaySource, ref TRayHitHandler)
-  nameWithType.vb: IHomogeneousCompoundShape(Of TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(RigidPose, RaySource, TRayHitHandler)
+- uid: BepuPhysics.Collidables.IHomogeneousCompoundShape`2.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.IHomogeneousCompoundShape-2.html#BepuPhysics_Collidables_IHomogeneousCompoundShape_2_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.IHomogeneousCompoundShape`2.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.IHomogeneousCompoundShape<TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.IHomogeneousCompoundShape(Of TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: IHomogeneousCompoundShape<TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: IHomogeneousCompoundShape(Of TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, BufferPool, TRayHitHandler)
+- uid: BepuPhysics.Collidables.IHomogeneousCompoundShape`2.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.IHomogeneousCompoundShape-2.html#BepuPhysics_Collidables_IHomogeneousCompoundShape_2_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.IHomogeneousCompoundShape`2.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RaySource, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.IHomogeneousCompoundShape<TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.IHomogeneousCompoundShape(Of TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: IHomogeneousCompoundShape<TChildShape, TChildShapeWide>.RayTest<TRayHitHandler>(in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: IHomogeneousCompoundShape(Of TChildShape, TChildShapeWide).RayTest(Of TRayHitHandler)(RigidPose, RaySource, BufferPool, TRayHitHandler)
 - uid: BepuPhysics.Collidables.IShape
   name: IShape
   href: api/BepuPhysics.Collidables.IShape.html
@@ -7467,6 +7485,15 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.Collidables.Mesh.FindLocalOverlaps
   nameWithType: Mesh.FindLocalOverlaps
+- uid: BepuPhysics.Collidables.Mesh.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,``0@)
+  name: FindLocalOverlaps<TEnumerator>(Vector3, Vector3, BufferPool, Shapes, ref TEnumerator)
+  href: api/BepuPhysics.Collidables.Mesh.html#BepuPhysics_Collidables_Mesh_FindLocalOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes___0__
+  commentId: M:BepuPhysics.Collidables.Mesh.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,``0@)
+  name.vb: FindLocalOverlaps(Of TEnumerator)(Vector3, Vector3, BufferPool, Shapes, TEnumerator)
+  fullName: BepuPhysics.Collidables.Mesh.FindLocalOverlaps<TEnumerator>(System.Numerics.Vector3, System.Numerics.Vector3, BepuUtilities.Memory.BufferPool, BepuPhysics.Collidables.Shapes, ref TEnumerator)
+  fullName.vb: BepuPhysics.Collidables.Mesh.FindLocalOverlaps(Of TEnumerator)(System.Numerics.Vector3, System.Numerics.Vector3, BepuUtilities.Memory.BufferPool, BepuPhysics.Collidables.Shapes, TEnumerator)
+  nameWithType: Mesh.FindLocalOverlaps<TEnumerator>(Vector3, Vector3, BufferPool, Shapes, ref TEnumerator)
+  nameWithType.vb: Mesh.FindLocalOverlaps(Of TEnumerator)(Vector3, Vector3, BufferPool, Shapes, TEnumerator)
 - uid: BepuPhysics.Collidables.Mesh.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,System.Void*)
   name: FindLocalOverlaps<TOverlaps>(Vector3, Vector3, Vector3, float, BufferPool, Shapes, void*)
   href: api/BepuPhysics.Collidables.Mesh.html#BepuPhysics_Collidables_Mesh_FindLocalOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes_System_Void__
@@ -7593,24 +7620,24 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.Collidables.Mesh.RayTest
   nameWithType: Mesh.RayTest
-- uid: BepuPhysics.Collidables.Mesh.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)
-  name: RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.Mesh.html#BepuPhysics_Collidables_Mesh_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single____0__
-  commentId: M:BepuPhysics.Collidables.Mesh.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.Mesh.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.Mesh.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, TRayHitHandler)
-  nameWithType: Mesh.RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  nameWithType.vb: Mesh.RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, TRayHitHandler)
-- uid: BepuPhysics.Collidables.Mesh.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)
-  name: RayTest<TRayHitHandler>(in RigidPose, ref RaySource, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.Mesh.html#BepuPhysics_Collidables_Mesh_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource____0__
-  commentId: M:BepuPhysics.Collidables.Mesh.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RaySource, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.Mesh.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.Mesh.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, TRayHitHandler)
-  nameWithType: Mesh.RayTest<TRayHitHandler>(in RigidPose, ref RaySource, ref TRayHitHandler)
-  nameWithType.vb: Mesh.RayTest(Of TRayHitHandler)(RigidPose, RaySource, TRayHitHandler)
+- uid: BepuPhysics.Collidables.Mesh.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.Mesh.html#BepuPhysics_Collidables_Mesh_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.Mesh.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.Mesh.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.Mesh.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: Mesh.RayTest<TRayHitHandler>(in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: Mesh.RayTest(Of TRayHitHandler)(RigidPose, RayData, Single, BufferPool, TRayHitHandler)
+- uid: BepuPhysics.Collidables.Mesh.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.Mesh.html#BepuPhysics_Collidables_Mesh_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.Mesh.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(RigidPose, RaySource, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.Mesh.RayTest<TRayHitHandler>(in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.Mesh.RayTest(Of TRayHitHandler)(BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: Mesh.RayTest<TRayHitHandler>(in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: Mesh.RayTest(Of TRayHitHandler)(RigidPose, RaySource, BufferPool, TRayHitHandler)
 - uid: BepuPhysics.Collidables.Mesh.Recenter(System.Numerics.Vector3)
   name: Recenter(Vector3)
   href: api/BepuPhysics.Collidables.Mesh.html#BepuPhysics_Collidables_Mesh_Recenter_System_Numerics_Vector3_
@@ -8041,24 +8068,24 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.Collidables.ShapeBatch.RayTest
   nameWithType: ShapeBatch.RayTest
-- uid: BepuPhysics.Collidables.ShapeBatch.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)
-  name: RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.ShapeBatch.html#BepuPhysics_Collidables_ShapeBatch_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single____0__
-  commentId: M:BepuPhysics.Collidables.ShapeBatch.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.ShapeBatch.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.ShapeBatch.RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, TRayHitHandler)
-  nameWithType: ShapeBatch.RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  nameWithType.vb: ShapeBatch.RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, TRayHitHandler)
-- uid: BepuPhysics.Collidables.ShapeBatch.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)
-  name: RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, ref TRayHitHandler)
-  href: api/BepuPhysics.Collidables.ShapeBatch.html#BepuPhysics_Collidables_ShapeBatch_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource____0__
-  commentId: M:BepuPhysics.Collidables.ShapeBatch.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)
-  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, TRayHitHandler)
-  fullName: BepuPhysics.Collidables.ShapeBatch.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, ref TRayHitHandler)
-  fullName.vb: BepuPhysics.Collidables.ShapeBatch.RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, TRayHitHandler)
-  nameWithType: ShapeBatch.RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, ref TRayHitHandler)
-  nameWithType.vb: ShapeBatch.RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, TRayHitHandler)
+- uid: BepuPhysics.Collidables.ShapeBatch.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.ShapeBatch.html#BepuPhysics_Collidables_ShapeBatch_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.ShapeBatch.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.ShapeBatch.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, in BepuPhysics.Trees.RayData, ref float, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.ShapeBatch.RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RayData, Single, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: ShapeBatch.RayTest<TRayHitHandler>(int, in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: ShapeBatch.RayTest(Of TRayHitHandler)(Integer, RigidPose, RayData, Single, BufferPool, TRayHitHandler)
+- uid: BepuPhysics.Collidables.ShapeBatch.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)
+  name: RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  href: api/BepuPhysics.Collidables.ShapeBatch.html#BepuPhysics_Collidables_ShapeBatch_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Collidables.ShapeBatch.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, BufferPool, TRayHitHandler)
+  fullName: BepuPhysics.Collidables.ShapeBatch.RayTest<TRayHitHandler>(int, in BepuPhysics.RigidPose, ref BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool, ref TRayHitHandler)
+  fullName.vb: BepuPhysics.Collidables.ShapeBatch.RayTest(Of TRayHitHandler)(Integer, BepuPhysics.RigidPose, BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool, TRayHitHandler)
+  nameWithType: ShapeBatch.RayTest<TRayHitHandler>(int, in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  nameWithType.vb: ShapeBatch.RayTest(Of TRayHitHandler)(Integer, RigidPose, RaySource, BufferPool, TRayHitHandler)
 - uid: BepuPhysics.Collidables.ShapeBatch.RecursivelyRemoveAndDispose(System.Int32,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool)
   name: RecursivelyRemoveAndDispose(int, Shapes, BufferPool)
   href: api/BepuPhysics.Collidables.ShapeBatch.html#BepuPhysics_Collidables_ShapeBatch_RecursivelyRemoveAndDispose_System_Int32_BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool_
@@ -9885,24 +9912,24 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps
   nameWithType: BroadPhase.GetOverlaps
-- uid: BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps``1(BepuUtilities.BoundingBox@,``0@)
-  name: GetOverlaps<TOverlapEnumerator>(in BoundingBox, ref TOverlapEnumerator)
-  href: api/BepuPhysics.CollisionDetection.BroadPhase.html#BepuPhysics_CollisionDetection_BroadPhase_GetOverlaps__1_BepuUtilities_BoundingBox____0__
-  commentId: M:BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps``1(BepuUtilities.BoundingBox@,``0@)
-  name.vb: GetOverlaps(Of TOverlapEnumerator)(BoundingBox, TOverlapEnumerator)
-  fullName: BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps<TOverlapEnumerator>(in BepuUtilities.BoundingBox, ref TOverlapEnumerator)
-  fullName.vb: BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps(Of TOverlapEnumerator)(BepuUtilities.BoundingBox, TOverlapEnumerator)
-  nameWithType: BroadPhase.GetOverlaps<TOverlapEnumerator>(in BoundingBox, ref TOverlapEnumerator)
-  nameWithType.vb: BroadPhase.GetOverlaps(Of TOverlapEnumerator)(BoundingBox, TOverlapEnumerator)
-- uid: BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,``0@)
-  name: GetOverlaps<TOverlapEnumerator>(Vector3, Vector3, ref TOverlapEnumerator)
-  href: api/BepuPhysics.CollisionDetection.BroadPhase.html#BepuPhysics_CollisionDetection_BroadPhase_GetOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3___0__
-  commentId: M:BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,``0@)
-  name.vb: GetOverlaps(Of TOverlapEnumerator)(Vector3, Vector3, TOverlapEnumerator)
-  fullName: BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps<TOverlapEnumerator>(System.Numerics.Vector3, System.Numerics.Vector3, ref TOverlapEnumerator)
-  fullName.vb: BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps(Of TOverlapEnumerator)(System.Numerics.Vector3, System.Numerics.Vector3, TOverlapEnumerator)
-  nameWithType: BroadPhase.GetOverlaps<TOverlapEnumerator>(Vector3, Vector3, ref TOverlapEnumerator)
-  nameWithType.vb: BroadPhase.GetOverlaps(Of TOverlapEnumerator)(Vector3, Vector3, TOverlapEnumerator)
+- uid: BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps``1(BepuUtilities.BoundingBox@,BepuUtilities.Memory.BufferPool,``0@)
+  name: GetOverlaps<TOverlapEnumerator>(in BoundingBox, BufferPool, ref TOverlapEnumerator)
+  href: api/BepuPhysics.CollisionDetection.BroadPhase.html#BepuPhysics_CollisionDetection_BroadPhase_GetOverlaps__1_BepuUtilities_BoundingBox__BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps``1(BepuUtilities.BoundingBox@,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: GetOverlaps(Of TOverlapEnumerator)(BoundingBox, BufferPool, TOverlapEnumerator)
+  fullName: BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps<TOverlapEnumerator>(in BepuUtilities.BoundingBox, BepuUtilities.Memory.BufferPool, ref TOverlapEnumerator)
+  fullName.vb: BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps(Of TOverlapEnumerator)(BepuUtilities.BoundingBox, BepuUtilities.Memory.BufferPool, TOverlapEnumerator)
+  nameWithType: BroadPhase.GetOverlaps<TOverlapEnumerator>(in BoundingBox, BufferPool, ref TOverlapEnumerator)
+  nameWithType.vb: BroadPhase.GetOverlaps(Of TOverlapEnumerator)(BoundingBox, BufferPool, TOverlapEnumerator)
+- uid: BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,``0@)
+  name: GetOverlaps<TOverlapEnumerator>(Vector3, Vector3, BufferPool, ref TOverlapEnumerator)
+  href: api/BepuPhysics.CollisionDetection.BroadPhase.html#BepuPhysics_CollisionDetection_BroadPhase_GetOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: GetOverlaps(Of TOverlapEnumerator)(Vector3, Vector3, BufferPool, TOverlapEnumerator)
+  fullName: BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps<TOverlapEnumerator>(System.Numerics.Vector3, System.Numerics.Vector3, BepuUtilities.Memory.BufferPool, ref TOverlapEnumerator)
+  fullName.vb: BepuPhysics.CollisionDetection.BroadPhase.GetOverlaps(Of TOverlapEnumerator)(System.Numerics.Vector3, System.Numerics.Vector3, BepuUtilities.Memory.BufferPool, TOverlapEnumerator)
+  nameWithType: BroadPhase.GetOverlaps<TOverlapEnumerator>(Vector3, Vector3, BufferPool, ref TOverlapEnumerator)
+  nameWithType.vb: BroadPhase.GetOverlaps(Of TOverlapEnumerator)(Vector3, Vector3, BufferPool, TOverlapEnumerator)
 - uid: BepuPhysics.CollisionDetection.BroadPhase.GetStaticBoundsPointers(System.Int32,System.Numerics.Vector3*@,System.Numerics.Vector3*@)
   name: GetStaticBoundsPointers(int, out Vector3*, out Vector3*)
   href: api/BepuPhysics.CollisionDetection.BroadPhase.html#BepuPhysics_CollisionDetection_BroadPhase_GetStaticBoundsPointers_System_Int32_System_Numerics_Vector3___System_Numerics_Vector3___
@@ -9939,15 +9966,15 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.CollisionDetection.BroadPhase.RayCast
   nameWithType: BroadPhase.RayCast
-- uid: BepuPhysics.CollisionDetection.BroadPhase.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single,``0@,System.Int32)
-  name: RayCast<TRayTester>(Vector3, Vector3, float, ref TRayTester, int)
-  href: api/BepuPhysics.CollisionDetection.BroadPhase.html#BepuPhysics_CollisionDetection_BroadPhase_RayCast__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Single___0__System_Int32_
-  commentId: M:BepuPhysics.CollisionDetection.BroadPhase.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single,``0@,System.Int32)
-  name.vb: RayCast(Of TRayTester)(Vector3, Vector3, Single, TRayTester, Integer)
-  fullName: BepuPhysics.CollisionDetection.BroadPhase.RayCast<TRayTester>(System.Numerics.Vector3, System.Numerics.Vector3, float, ref TRayTester, int)
-  fullName.vb: BepuPhysics.CollisionDetection.BroadPhase.RayCast(Of TRayTester)(System.Numerics.Vector3, System.Numerics.Vector3, Single, TRayTester, Integer)
-  nameWithType: BroadPhase.RayCast<TRayTester>(Vector3, Vector3, float, ref TRayTester, int)
-  nameWithType.vb: BroadPhase.RayCast(Of TRayTester)(Vector3, Vector3, Single, TRayTester, Integer)
+- uid: BepuPhysics.CollisionDetection.BroadPhase.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,``0@,System.Int32)
+  name: RayCast<TRayTester>(Vector3, Vector3, float, BufferPool, ref TRayTester, int)
+  href: api/BepuPhysics.CollisionDetection.BroadPhase.html#BepuPhysics_CollisionDetection_BroadPhase_RayCast__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool___0__System_Int32_
+  commentId: M:BepuPhysics.CollisionDetection.BroadPhase.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,``0@,System.Int32)
+  name.vb: RayCast(Of TRayTester)(Vector3, Vector3, Single, BufferPool, TRayTester, Integer)
+  fullName: BepuPhysics.CollisionDetection.BroadPhase.RayCast<TRayTester>(System.Numerics.Vector3, System.Numerics.Vector3, float, BepuUtilities.Memory.BufferPool, ref TRayTester, int)
+  fullName.vb: BepuPhysics.CollisionDetection.BroadPhase.RayCast(Of TRayTester)(System.Numerics.Vector3, System.Numerics.Vector3, Single, BepuUtilities.Memory.BufferPool, TRayTester, Integer)
+  nameWithType: BroadPhase.RayCast<TRayTester>(Vector3, Vector3, float, BufferPool, ref TRayTester, int)
+  nameWithType.vb: BroadPhase.RayCast(Of TRayTester)(Vector3, Vector3, Single, BufferPool, TRayTester, Integer)
 - uid: BepuPhysics.CollisionDetection.BroadPhase.RefinementScheduler
   name: BroadPhase.RefinementScheduler
   href: api/BepuPhysics.CollisionDetection.BroadPhase.RefinementScheduler.html
@@ -10050,24 +10077,24 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.CollisionDetection.BroadPhase.Sweep
   nameWithType: BroadPhase.Sweep
-- uid: BepuPhysics.CollisionDetection.BroadPhase.Sweep``1(BepuUtilities.BoundingBox@,System.Numerics.Vector3,System.Single,``0@)
-  name: Sweep<TSweepTester>(in BoundingBox, Vector3, float, ref TSweepTester)
-  href: api/BepuPhysics.CollisionDetection.BroadPhase.html#BepuPhysics_CollisionDetection_BroadPhase_Sweep__1_BepuUtilities_BoundingBox__System_Numerics_Vector3_System_Single___0__
-  commentId: M:BepuPhysics.CollisionDetection.BroadPhase.Sweep``1(BepuUtilities.BoundingBox@,System.Numerics.Vector3,System.Single,``0@)
-  name.vb: Sweep(Of TSweepTester)(BoundingBox, Vector3, Single, TSweepTester)
-  fullName: BepuPhysics.CollisionDetection.BroadPhase.Sweep<TSweepTester>(in BepuUtilities.BoundingBox, System.Numerics.Vector3, float, ref TSweepTester)
-  fullName.vb: BepuPhysics.CollisionDetection.BroadPhase.Sweep(Of TSweepTester)(BepuUtilities.BoundingBox, System.Numerics.Vector3, Single, TSweepTester)
-  nameWithType: BroadPhase.Sweep<TSweepTester>(in BoundingBox, Vector3, float, ref TSweepTester)
-  nameWithType.vb: BroadPhase.Sweep(Of TSweepTester)(BoundingBox, Vector3, Single, TSweepTester)
-- uid: BepuPhysics.CollisionDetection.BroadPhase.Sweep``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,``0@)
-  name: Sweep<TSweepTester>(Vector3, Vector3, Vector3, float, ref TSweepTester)
-  href: api/BepuPhysics.CollisionDetection.BroadPhase.html#BepuPhysics_CollisionDetection_BroadPhase_Sweep__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single___0__
-  commentId: M:BepuPhysics.CollisionDetection.BroadPhase.Sweep``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,``0@)
-  name.vb: Sweep(Of TSweepTester)(Vector3, Vector3, Vector3, Single, TSweepTester)
-  fullName: BepuPhysics.CollisionDetection.BroadPhase.Sweep<TSweepTester>(System.Numerics.Vector3, System.Numerics.Vector3, System.Numerics.Vector3, float, ref TSweepTester)
-  fullName.vb: BepuPhysics.CollisionDetection.BroadPhase.Sweep(Of TSweepTester)(System.Numerics.Vector3, System.Numerics.Vector3, System.Numerics.Vector3, Single, TSweepTester)
-  nameWithType: BroadPhase.Sweep<TSweepTester>(Vector3, Vector3, Vector3, float, ref TSweepTester)
-  nameWithType.vb: BroadPhase.Sweep(Of TSweepTester)(Vector3, Vector3, Vector3, Single, TSweepTester)
+- uid: BepuPhysics.CollisionDetection.BroadPhase.Sweep``1(BepuUtilities.BoundingBox@,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,``0@)
+  name: Sweep<TSweepTester>(in BoundingBox, Vector3, float, BufferPool, ref TSweepTester)
+  href: api/BepuPhysics.CollisionDetection.BroadPhase.html#BepuPhysics_CollisionDetection_BroadPhase_Sweep__1_BepuUtilities_BoundingBox__System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.CollisionDetection.BroadPhase.Sweep``1(BepuUtilities.BoundingBox@,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: Sweep(Of TSweepTester)(BoundingBox, Vector3, Single, BufferPool, TSweepTester)
+  fullName: BepuPhysics.CollisionDetection.BroadPhase.Sweep<TSweepTester>(in BepuUtilities.BoundingBox, System.Numerics.Vector3, float, BepuUtilities.Memory.BufferPool, ref TSweepTester)
+  fullName.vb: BepuPhysics.CollisionDetection.BroadPhase.Sweep(Of TSweepTester)(BepuUtilities.BoundingBox, System.Numerics.Vector3, Single, BepuUtilities.Memory.BufferPool, TSweepTester)
+  nameWithType: BroadPhase.Sweep<TSweepTester>(in BoundingBox, Vector3, float, BufferPool, ref TSweepTester)
+  nameWithType.vb: BroadPhase.Sweep(Of TSweepTester)(BoundingBox, Vector3, Single, BufferPool, TSweepTester)
+- uid: BepuPhysics.CollisionDetection.BroadPhase.Sweep``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,``0@)
+  name: Sweep<TSweepTester>(Vector3, Vector3, Vector3, float, BufferPool, ref TSweepTester)
+  href: api/BepuPhysics.CollisionDetection.BroadPhase.html#BepuPhysics_CollisionDetection_BroadPhase_Sweep__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.CollisionDetection.BroadPhase.Sweep``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: Sweep(Of TSweepTester)(Vector3, Vector3, Vector3, Single, BufferPool, TSweepTester)
+  fullName: BepuPhysics.CollisionDetection.BroadPhase.Sweep<TSweepTester>(System.Numerics.Vector3, System.Numerics.Vector3, System.Numerics.Vector3, float, BepuUtilities.Memory.BufferPool, ref TSweepTester)
+  fullName.vb: BepuPhysics.CollisionDetection.BroadPhase.Sweep(Of TSweepTester)(System.Numerics.Vector3, System.Numerics.Vector3, System.Numerics.Vector3, Single, BepuUtilities.Memory.BufferPool, TSweepTester)
+  nameWithType: BroadPhase.Sweep<TSweepTester>(Vector3, Vector3, Vector3, float, BufferPool, ref TSweepTester)
+  nameWithType.vb: BroadPhase.Sweep(Of TSweepTester)(Vector3, Vector3, Vector3, Single, BufferPool, TSweepTester)
 - uid: BepuPhysics.CollisionDetection.BroadPhase.Update(BepuUtilities.IThreadDispatcher)
   name: Update(IThreadDispatcher)
   href: api/BepuPhysics.CollisionDetection.BroadPhase.html#BepuPhysics_CollisionDetection_BroadPhase_Update_BepuUtilities_IThreadDispatcher_
@@ -13195,6 +13222,15 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.CollisionDetection.CollisionTasks.IBoundsQueryableCompound.FindLocalOverlaps
   nameWithType: IBoundsQueryableCompound.FindLocalOverlaps
+- uid: BepuPhysics.CollisionDetection.CollisionTasks.IBoundsQueryableCompound.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,``0@)
+  name: FindLocalOverlaps<TEnumerator>(Vector3, Vector3, BufferPool, Shapes, ref TEnumerator)
+  href: api/BepuPhysics.CollisionDetection.CollisionTasks.IBoundsQueryableCompound.html#BepuPhysics_CollisionDetection_CollisionTasks_IBoundsQueryableCompound_FindLocalOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes___0__
+  commentId: M:BepuPhysics.CollisionDetection.CollisionTasks.IBoundsQueryableCompound.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,``0@)
+  name.vb: FindLocalOverlaps(Of TEnumerator)(Vector3, Vector3, BufferPool, Shapes, TEnumerator)
+  fullName: BepuPhysics.CollisionDetection.CollisionTasks.IBoundsQueryableCompound.FindLocalOverlaps<TEnumerator>(System.Numerics.Vector3, System.Numerics.Vector3, BepuUtilities.Memory.BufferPool, BepuPhysics.Collidables.Shapes, ref TEnumerator)
+  fullName.vb: BepuPhysics.CollisionDetection.CollisionTasks.IBoundsQueryableCompound.FindLocalOverlaps(Of TEnumerator)(System.Numerics.Vector3, System.Numerics.Vector3, BepuUtilities.Memory.BufferPool, BepuPhysics.Collidables.Shapes, TEnumerator)
+  nameWithType: IBoundsQueryableCompound.FindLocalOverlaps<TEnumerator>(Vector3, Vector3, BufferPool, Shapes, ref TEnumerator)
+  nameWithType.vb: IBoundsQueryableCompound.FindLocalOverlaps(Of TEnumerator)(Vector3, Vector3, BufferPool, Shapes, TEnumerator)
 - uid: BepuPhysics.CollisionDetection.CollisionTasks.IBoundsQueryableCompound.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,System.Void*)
   name: FindLocalOverlaps<TOverlaps>(Vector3, Vector3, Vector3, float, BufferPool, Shapes, void*)
   href: api/BepuPhysics.CollisionDetection.CollisionTasks.IBoundsQueryableCompound.html#BepuPhysics_CollisionDetection_CollisionTasks_IBoundsQueryableCompound_FindLocalOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes_System_Void__
@@ -15205,6 +15241,18 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.CollisionDetection.CompoundMeshReduction.Create
   nameWithType: CompoundMeshReduction.Create
+- uid: BepuPhysics.CollisionDetection.CompoundMeshReduction.FindLocalOverlapsThunk
+  name: FindLocalOverlapsThunk
+  href: api/BepuPhysics.CollisionDetection.CompoundMeshReduction.html#BepuPhysics_CollisionDetection_CompoundMeshReduction_FindLocalOverlapsThunk
+  commentId: F:BepuPhysics.CollisionDetection.CompoundMeshReduction.FindLocalOverlapsThunk
+  fullName: BepuPhysics.CollisionDetection.CompoundMeshReduction.FindLocalOverlapsThunk
+  nameWithType: CompoundMeshReduction.FindLocalOverlapsThunk
+- uid: BepuPhysics.CollisionDetection.CompoundMeshReduction.GetLocalChildThunk
+  name: GetLocalChildThunk
+  href: api/BepuPhysics.CollisionDetection.CompoundMeshReduction.html#BepuPhysics_CollisionDetection_CompoundMeshReduction_GetLocalChildThunk
+  commentId: F:BepuPhysics.CollisionDetection.CompoundMeshReduction.GetLocalChildThunk
+  fullName: BepuPhysics.CollisionDetection.CompoundMeshReduction.GetLocalChildThunk
+  nameWithType: CompoundMeshReduction.GetLocalChildThunk
 - uid: BepuPhysics.CollisionDetection.CompoundMeshReduction.Inner
   name: Inner
   href: api/BepuPhysics.CollisionDetection.CompoundMeshReduction.html#BepuPhysics_CollisionDetection_CompoundMeshReduction_Inner
@@ -17103,15 +17151,15 @@ references:
   commentId: T:BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester
   fullName: BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester
   nameWithType: IBroadPhaseBatchedRayTester
-- uid: BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.RayTest(BepuPhysics.Collidables.CollidableReference,BepuPhysics.Trees.RaySource@)
-  name: RayTest(CollidableReference, ref RaySource)
-  href: api/BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.html#BepuPhysics_CollisionDetection_IBroadPhaseBatchedRayTester_RayTest_BepuPhysics_Collidables_CollidableReference_BepuPhysics_Trees_RaySource__
-  commentId: M:BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.RayTest(BepuPhysics.Collidables.CollidableReference,BepuPhysics.Trees.RaySource@)
-  name.vb: RayTest(CollidableReference, RaySource)
-  fullName: BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.RayTest(BepuPhysics.Collidables.CollidableReference, ref BepuPhysics.Trees.RaySource)
-  fullName.vb: BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.RayTest(BepuPhysics.Collidables.CollidableReference, BepuPhysics.Trees.RaySource)
-  nameWithType: IBroadPhaseBatchedRayTester.RayTest(CollidableReference, ref RaySource)
-  nameWithType.vb: IBroadPhaseBatchedRayTester.RayTest(CollidableReference, RaySource)
+- uid: BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.RayTest(BepuPhysics.Collidables.CollidableReference,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool)
+  name: RayTest(CollidableReference, ref RaySource, BufferPool)
+  href: api/BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.html#BepuPhysics_CollisionDetection_IBroadPhaseBatchedRayTester_RayTest_BepuPhysics_Collidables_CollidableReference_BepuPhysics_Trees_RaySource__BepuUtilities_Memory_BufferPool_
+  commentId: M:BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.RayTest(BepuPhysics.Collidables.CollidableReference,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool)
+  name.vb: RayTest(CollidableReference, RaySource, BufferPool)
+  fullName: BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.RayTest(BepuPhysics.Collidables.CollidableReference, ref BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool)
+  fullName.vb: BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.RayTest(BepuPhysics.Collidables.CollidableReference, BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool)
+  nameWithType: IBroadPhaseBatchedRayTester.RayTest(CollidableReference, ref RaySource, BufferPool)
+  nameWithType.vb: IBroadPhaseBatchedRayTester.RayTest(CollidableReference, RaySource, BufferPool)
 - uid: BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.RayTest*
   name: RayTest
   href: api/BepuPhysics.CollisionDetection.IBroadPhaseBatchedRayTester.html#BepuPhysics_CollisionDetection_IBroadPhaseBatchedRayTester_RayTest_
@@ -17125,15 +17173,15 @@ references:
   commentId: T:BepuPhysics.CollisionDetection.IBroadPhaseRayTester
   fullName: BepuPhysics.CollisionDetection.IBroadPhaseRayTester
   nameWithType: IBroadPhaseRayTester
-- uid: BepuPhysics.CollisionDetection.IBroadPhaseRayTester.RayTest(BepuPhysics.Collidables.CollidableReference,BepuPhysics.Trees.RayData*,System.Single*)
-  name: RayTest(CollidableReference, RayData*, float*)
-  href: api/BepuPhysics.CollisionDetection.IBroadPhaseRayTester.html#BepuPhysics_CollisionDetection_IBroadPhaseRayTester_RayTest_BepuPhysics_Collidables_CollidableReference_BepuPhysics_Trees_RayData__System_Single__
-  commentId: M:BepuPhysics.CollisionDetection.IBroadPhaseRayTester.RayTest(BepuPhysics.Collidables.CollidableReference,BepuPhysics.Trees.RayData*,System.Single*)
-  name.vb: RayTest(CollidableReference, RayData*, Single*)
-  fullName: BepuPhysics.CollisionDetection.IBroadPhaseRayTester.RayTest(BepuPhysics.Collidables.CollidableReference, BepuPhysics.Trees.RayData*, float*)
-  fullName.vb: BepuPhysics.CollisionDetection.IBroadPhaseRayTester.RayTest(BepuPhysics.Collidables.CollidableReference, BepuPhysics.Trees.RayData*, Single*)
-  nameWithType: IBroadPhaseRayTester.RayTest(CollidableReference, RayData*, float*)
-  nameWithType.vb: IBroadPhaseRayTester.RayTest(CollidableReference, RayData*, Single*)
+- uid: BepuPhysics.CollisionDetection.IBroadPhaseRayTester.RayTest(BepuPhysics.Collidables.CollidableReference,BepuPhysics.Trees.RayData*,System.Single*,BepuUtilities.Memory.BufferPool)
+  name: RayTest(CollidableReference, RayData*, float*, BufferPool)
+  href: api/BepuPhysics.CollisionDetection.IBroadPhaseRayTester.html#BepuPhysics_CollisionDetection_IBroadPhaseRayTester_RayTest_BepuPhysics_Collidables_CollidableReference_BepuPhysics_Trees_RayData__System_Single__BepuUtilities_Memory_BufferPool_
+  commentId: M:BepuPhysics.CollisionDetection.IBroadPhaseRayTester.RayTest(BepuPhysics.Collidables.CollidableReference,BepuPhysics.Trees.RayData*,System.Single*,BepuUtilities.Memory.BufferPool)
+  name.vb: RayTest(CollidableReference, RayData*, Single*, BufferPool)
+  fullName: BepuPhysics.CollisionDetection.IBroadPhaseRayTester.RayTest(BepuPhysics.Collidables.CollidableReference, BepuPhysics.Trees.RayData*, float*, BepuUtilities.Memory.BufferPool)
+  fullName.vb: BepuPhysics.CollisionDetection.IBroadPhaseRayTester.RayTest(BepuPhysics.Collidables.CollidableReference, BepuPhysics.Trees.RayData*, Single*, BepuUtilities.Memory.BufferPool)
+  nameWithType: IBroadPhaseRayTester.RayTest(CollidableReference, RayData*, float*, BufferPool)
+  nameWithType.vb: IBroadPhaseRayTester.RayTest(CollidableReference, RayData*, Single*, BufferPool)
 - uid: BepuPhysics.CollisionDetection.IBroadPhaseRayTester.RayTest*
   name: RayTest
   href: api/BepuPhysics.CollisionDetection.IBroadPhaseRayTester.html#BepuPhysics_CollisionDetection_IBroadPhaseRayTester_RayTest_
@@ -17746,6 +17794,40 @@ references:
   commentId: T:BepuPhysics.CollisionDetection.MeshReduction
   fullName: BepuPhysics.CollisionDetection.MeshReduction
   nameWithType: MeshReduction
+- uid: BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator
+  name: MeshReduction.ChildEnumerator
+  href: api/BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.html
+  commentId: T:BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator
+  fullName: BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator
+  nameWithType: MeshReduction.ChildEnumerator
+- uid: BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.List
+  name: List
+  href: api/BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.html#BepuPhysics_CollisionDetection_MeshReduction_ChildEnumerator_List
+  commentId: F:BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.List
+  fullName: BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.List
+  nameWithType: MeshReduction.ChildEnumerator.List
+- uid: BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.LoopBody(System.Int32)
+  name: LoopBody(int)
+  href: api/BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.html#BepuPhysics_CollisionDetection_MeshReduction_ChildEnumerator_LoopBody_System_Int32_
+  commentId: M:BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.LoopBody(System.Int32)
+  name.vb: LoopBody(Integer)
+  fullName: BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.LoopBody(int)
+  fullName.vb: BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.LoopBody(Integer)
+  nameWithType: MeshReduction.ChildEnumerator.LoopBody(int)
+  nameWithType.vb: MeshReduction.ChildEnumerator.LoopBody(Integer)
+- uid: BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.LoopBody*
+  name: LoopBody
+  href: api/BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.html#BepuPhysics_CollisionDetection_MeshReduction_ChildEnumerator_LoopBody_
+  commentId: Overload:BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.LoopBody
+  isSpec: "True"
+  fullName: BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.LoopBody
+  nameWithType: MeshReduction.ChildEnumerator.LoopBody
+- uid: BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.Pool
+  name: Pool
+  href: api/BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.html#BepuPhysics_CollisionDetection_MeshReduction_ChildEnumerator_Pool
+  commentId: F:BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.Pool
+  fullName: BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.Pool
+  nameWithType: MeshReduction.ChildEnumerator.Pool
 - uid: BepuPhysics.CollisionDetection.MeshReduction.Create(System.Int32,BepuUtilities.Memory.BufferPool)
   name: Create(int, BufferPool)
   href: api/BepuPhysics.CollisionDetection.MeshReduction.html#BepuPhysics_CollisionDetection_MeshReduction_Create_System_Int32_BepuUtilities_Memory_BufferPool_
@@ -17768,6 +17850,18 @@ references:
   commentId: F:BepuPhysics.CollisionDetection.MeshReduction.FaceCollisionFlag
   fullName: BepuPhysics.CollisionDetection.MeshReduction.FaceCollisionFlag
   nameWithType: MeshReduction.FaceCollisionFlag
+- uid: BepuPhysics.CollisionDetection.MeshReduction.FindLocalOverlapsThunk
+  name: FindLocalOverlapsThunk
+  href: api/BepuPhysics.CollisionDetection.MeshReduction.html#BepuPhysics_CollisionDetection_MeshReduction_FindLocalOverlapsThunk
+  commentId: F:BepuPhysics.CollisionDetection.MeshReduction.FindLocalOverlapsThunk
+  fullName: BepuPhysics.CollisionDetection.MeshReduction.FindLocalOverlapsThunk
+  nameWithType: MeshReduction.FindLocalOverlapsThunk
+- uid: BepuPhysics.CollisionDetection.MeshReduction.GetLocalChildThunk
+  name: GetLocalChildThunk
+  href: api/BepuPhysics.CollisionDetection.MeshReduction.html#BepuPhysics_CollisionDetection_MeshReduction_GetLocalChildThunk
+  commentId: F:BepuPhysics.CollisionDetection.MeshReduction.GetLocalChildThunk
+  fullName: BepuPhysics.CollisionDetection.MeshReduction.GetLocalChildThunk
+  nameWithType: MeshReduction.GetLocalChildThunk
 - uid: BepuPhysics.CollisionDetection.MeshReduction.Inner
   name: Inner
   href: api/BepuPhysics.CollisionDetection.MeshReduction.html#BepuPhysics_CollisionDetection_MeshReduction_Inner
@@ -17830,15 +17924,15 @@ references:
   commentId: F:BepuPhysics.CollisionDetection.MeshReduction.QueryBounds
   fullName: BepuPhysics.CollisionDetection.MeshReduction.QueryBounds
   nameWithType: MeshReduction.QueryBounds
-- uid: BepuPhysics.CollisionDetection.MeshReduction.ReduceManifolds(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.Triangle}@,BepuUtilities.Memory.Buffer{BepuPhysics.CollisionDetection.NonconvexReductionChild}@,System.Int32,System.Int32,System.Boolean,BepuUtilities.BoundingBox@,BepuUtilities.Matrix3x3@,BepuUtilities.Matrix3x3@,BepuPhysics.Collidables.Mesh*,BepuUtilities.Memory.BufferPool)
-  name: ReduceManifolds(ref Buffer<Triangle>, ref Buffer<NonconvexReductionChild>, int, int, bool, in BoundingBox, in Matrix3x3, in Matrix3x3, Mesh*, BufferPool)
-  href: api/BepuPhysics.CollisionDetection.MeshReduction.html#BepuPhysics_CollisionDetection_MeshReduction_ReduceManifolds_BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_Triangle___BepuUtilities_Memory_Buffer_BepuPhysics_CollisionDetection_NonconvexReductionChild___System_Int32_System_Int32_System_Boolean_BepuUtilities_BoundingBox__BepuUtilities_Matrix3x3__BepuUtilities_Matrix3x3__BepuPhysics_Collidables_Mesh__BepuUtilities_Memory_BufferPool_
-  commentId: M:BepuPhysics.CollisionDetection.MeshReduction.ReduceManifolds(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.Triangle}@,BepuUtilities.Memory.Buffer{BepuPhysics.CollisionDetection.NonconvexReductionChild}@,System.Int32,System.Int32,System.Boolean,BepuUtilities.BoundingBox@,BepuUtilities.Matrix3x3@,BepuUtilities.Matrix3x3@,BepuPhysics.Collidables.Mesh*,BepuUtilities.Memory.BufferPool)
-  name.vb: ReduceManifolds(Buffer(Of Triangle), Buffer(Of NonconvexReductionChild), Integer, Integer, Boolean, BoundingBox, Matrix3x3, Matrix3x3, Mesh*, BufferPool)
-  fullName: BepuPhysics.CollisionDetection.MeshReduction.ReduceManifolds(ref BepuUtilities.Memory.Buffer<BepuPhysics.Collidables.Triangle>, ref BepuUtilities.Memory.Buffer<BepuPhysics.CollisionDetection.NonconvexReductionChild>, int, int, bool, in BepuUtilities.BoundingBox, in BepuUtilities.Matrix3x3, in BepuUtilities.Matrix3x3, BepuPhysics.Collidables.Mesh*, BepuUtilities.Memory.BufferPool)
-  fullName.vb: BepuPhysics.CollisionDetection.MeshReduction.ReduceManifolds(BepuUtilities.Memory.Buffer(Of BepuPhysics.Collidables.Triangle), BepuUtilities.Memory.Buffer(Of BepuPhysics.CollisionDetection.NonconvexReductionChild), Integer, Integer, Boolean, BepuUtilities.BoundingBox, BepuUtilities.Matrix3x3, BepuUtilities.Matrix3x3, BepuPhysics.Collidables.Mesh*, BepuUtilities.Memory.BufferPool)
-  nameWithType: MeshReduction.ReduceManifolds(ref Buffer<Triangle>, ref Buffer<NonconvexReductionChild>, int, int, bool, in BoundingBox, in Matrix3x3, in Matrix3x3, Mesh*, BufferPool)
-  nameWithType.vb: MeshReduction.ReduceManifolds(Buffer(Of Triangle), Buffer(Of NonconvexReductionChild), Integer, Integer, Boolean, BoundingBox, Matrix3x3, Matrix3x3, Mesh*, BufferPool)
+- uid: BepuPhysics.CollisionDetection.MeshReduction.ReduceManifolds(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.Triangle}@,BepuUtilities.Memory.Buffer{BepuPhysics.CollisionDetection.NonconvexReductionChild}@,System.Int32,System.Int32,System.Boolean,BepuUtilities.BoundingBox@,BepuUtilities.Matrix3x3@,BepuUtilities.Matrix3x3@,System.Void*,,,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool)
+  name: ReduceManifolds(ref Buffer<Triangle>, ref Buffer<NonconvexReductionChild>, int, int, bool, in BoundingBox, in Matrix3x3, in Matrix3x3, void*, delegate*<void*, Vector3, Vector3, BufferPool, Shapes, ref ChildEnumerator, void>, delegate*<void*, int, out Triangle, void>, Shapes, BufferPool)
+  href: api/BepuPhysics.CollisionDetection.MeshReduction.html#BepuPhysics_CollisionDetection_MeshReduction_ReduceManifolds_BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_Triangle___BepuUtilities_Memory_Buffer_BepuPhysics_CollisionDetection_NonconvexReductionChild___System_Int32_System_Int32_System_Boolean_BepuUtilities_BoundingBox__BepuUtilities_Matrix3x3__BepuUtilities_Matrix3x3__System_Void____BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool_
+  commentId: M:BepuPhysics.CollisionDetection.MeshReduction.ReduceManifolds(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.Triangle}@,BepuUtilities.Memory.Buffer{BepuPhysics.CollisionDetection.NonconvexReductionChild}@,System.Int32,System.Int32,System.Boolean,BepuUtilities.BoundingBox@,BepuUtilities.Matrix3x3@,BepuUtilities.Matrix3x3@,System.Void*,,,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool)
+  name.vb: ReduceManifolds(Buffer(Of Triangle), Buffer(Of NonconvexReductionChild), Integer, Integer, Boolean, BoundingBox, Matrix3x3, Matrix3x3, Void*, , , Shapes, BufferPool)
+  fullName: BepuPhysics.CollisionDetection.MeshReduction.ReduceManifolds(ref BepuUtilities.Memory.Buffer<BepuPhysics.Collidables.Triangle>, ref BepuUtilities.Memory.Buffer<BepuPhysics.CollisionDetection.NonconvexReductionChild>, int, int, bool, in BepuUtilities.BoundingBox, in BepuUtilities.Matrix3x3, in BepuUtilities.Matrix3x3, void*, delegate*<void*, System.Numerics.Vector3, System.Numerics.Vector3, BepuUtilities.Memory.BufferPool, BepuPhysics.Collidables.Shapes, ref BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator, void>, delegate*<void*, int, out BepuPhysics.Collidables.Triangle, void>, BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool)
+  fullName.vb: BepuPhysics.CollisionDetection.MeshReduction.ReduceManifolds(BepuUtilities.Memory.Buffer(Of BepuPhysics.Collidables.Triangle), BepuUtilities.Memory.Buffer(Of BepuPhysics.CollisionDetection.NonconvexReductionChild), Integer, Integer, Boolean, BepuUtilities.BoundingBox, BepuUtilities.Matrix3x3, BepuUtilities.Matrix3x3, Void*, , , BepuPhysics.Collidables.Shapes, BepuUtilities.Memory.BufferPool)
+  nameWithType: MeshReduction.ReduceManifolds(ref Buffer<Triangle>, ref Buffer<NonconvexReductionChild>, int, int, bool, in BoundingBox, in Matrix3x3, in Matrix3x3, void*, delegate*<void*, Vector3, Vector3, BufferPool, Shapes, ref MeshReduction.ChildEnumerator, void>, delegate*<void*, int, out Triangle, void>, Shapes, BufferPool)
+  nameWithType.vb: MeshReduction.ReduceManifolds(Buffer(Of Triangle), Buffer(Of NonconvexReductionChild), Integer, Integer, Boolean, BoundingBox, Matrix3x3, Matrix3x3, Void*, , , Shapes, BufferPool)
 - uid: BepuPhysics.CollisionDetection.MeshReduction.ReduceManifolds*
   name: ReduceManifolds
   href: api/BepuPhysics.CollisionDetection.MeshReduction.html#BepuPhysics_CollisionDetection_MeshReduction_ReduceManifolds_
@@ -17874,6 +17968,31 @@ references:
   fullName.vb: BepuPhysics.CollisionDetection.MeshReduction.TryFlush(Of TCallbacks)(Integer, BepuPhysics.CollisionDetection.CollisionBatcher(Of TCallbacks))
   nameWithType: MeshReduction.TryFlush<TCallbacks>(int, ref CollisionBatcher<TCallbacks>)
   nameWithType.vb: MeshReduction.TryFlush(Of TCallbacks)(Integer, CollisionBatcher(Of TCallbacks))
+- uid: BepuPhysics.CollisionDetection.MeshReductionThunks`1
+  name: MeshReductionThunks<TMesh>
+  href: api/BepuPhysics.CollisionDetection.MeshReductionThunks-1.html
+  commentId: T:BepuPhysics.CollisionDetection.MeshReductionThunks`1
+  name.vb: MeshReductionThunks(Of TMesh)
+  fullName: BepuPhysics.CollisionDetection.MeshReductionThunks<TMesh>
+  fullName.vb: BepuPhysics.CollisionDetection.MeshReductionThunks(Of TMesh)
+  nameWithType: MeshReductionThunks<TMesh>
+  nameWithType.vb: MeshReductionThunks(Of TMesh)
+- uid: BepuPhysics.CollisionDetection.MeshReductionThunks`1.FindLocalOverlaps
+  name: FindLocalOverlaps
+  href: api/BepuPhysics.CollisionDetection.MeshReductionThunks-1.html#BepuPhysics_CollisionDetection_MeshReductionThunks_1_FindLocalOverlaps
+  commentId: F:BepuPhysics.CollisionDetection.MeshReductionThunks`1.FindLocalOverlaps
+  fullName: BepuPhysics.CollisionDetection.MeshReductionThunks<TMesh>.FindLocalOverlaps
+  fullName.vb: BepuPhysics.CollisionDetection.MeshReductionThunks(Of TMesh).FindLocalOverlaps
+  nameWithType: MeshReductionThunks<TMesh>.FindLocalOverlaps
+  nameWithType.vb: MeshReductionThunks(Of TMesh).FindLocalOverlaps
+- uid: BepuPhysics.CollisionDetection.MeshReductionThunks`1.GetLocalChild
+  name: GetLocalChild
+  href: api/BepuPhysics.CollisionDetection.MeshReductionThunks-1.html#BepuPhysics_CollisionDetection_MeshReductionThunks_1_GetLocalChild
+  commentId: F:BepuPhysics.CollisionDetection.MeshReductionThunks`1.GetLocalChild
+  fullName: BepuPhysics.CollisionDetection.MeshReductionThunks<TMesh>.GetLocalChild
+  fullName.vb: BepuPhysics.CollisionDetection.MeshReductionThunks(Of TMesh).GetLocalChild
+  nameWithType: MeshReductionThunks<TMesh>.GetLocalChild
+  nameWithType.vb: MeshReductionThunks(Of TMesh).GetLocalChild
 - uid: BepuPhysics.CollisionDetection.NarrowPhase
   name: NarrowPhase
   href: api/BepuPhysics.CollisionDetection.NarrowPhase.html
@@ -40265,15 +40384,15 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.Simulation.RayCast
   nameWithType: Simulation.RayCast
-- uid: BepuPhysics.Simulation.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single,``0@,System.Int32)
-  name: RayCast<THitHandler>(Vector3, Vector3, float, ref THitHandler, int)
-  href: api/BepuPhysics.Simulation.html#BepuPhysics_Simulation_RayCast__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Single___0__System_Int32_
-  commentId: M:BepuPhysics.Simulation.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single,``0@,System.Int32)
-  name.vb: RayCast(Of THitHandler)(Vector3, Vector3, Single, THitHandler, Integer)
-  fullName: BepuPhysics.Simulation.RayCast<THitHandler>(System.Numerics.Vector3, System.Numerics.Vector3, float, ref THitHandler, int)
-  fullName.vb: BepuPhysics.Simulation.RayCast(Of THitHandler)(System.Numerics.Vector3, System.Numerics.Vector3, Single, THitHandler, Integer)
-  nameWithType: Simulation.RayCast<THitHandler>(Vector3, Vector3, float, ref THitHandler, int)
-  nameWithType.vb: Simulation.RayCast(Of THitHandler)(Vector3, Vector3, Single, THitHandler, Integer)
+- uid: BepuPhysics.Simulation.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,``0@,System.Int32)
+  name: RayCast<THitHandler>(Vector3, Vector3, float, BufferPool, ref THitHandler, int)
+  href: api/BepuPhysics.Simulation.html#BepuPhysics_Simulation_RayCast__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool___0__System_Int32_
+  commentId: M:BepuPhysics.Simulation.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,``0@,System.Int32)
+  name.vb: RayCast(Of THitHandler)(Vector3, Vector3, Single, BufferPool, THitHandler, Integer)
+  fullName: BepuPhysics.Simulation.RayCast<THitHandler>(System.Numerics.Vector3, System.Numerics.Vector3, float, BepuUtilities.Memory.BufferPool, ref THitHandler, int)
+  fullName.vb: BepuPhysics.Simulation.RayCast(Of THitHandler)(System.Numerics.Vector3, System.Numerics.Vector3, Single, BepuUtilities.Memory.BufferPool, THitHandler, Integer)
+  nameWithType: Simulation.RayCast<THitHandler>(Vector3, Vector3, float, BufferPool, ref THitHandler, int)
+  nameWithType.vb: Simulation.RayCast(Of THitHandler)(Vector3, Vector3, Single, BufferPool, THitHandler, Integer)
 - uid: BepuPhysics.Simulation.Resize(BepuPhysics.SimulationAllocationSizes)
   name: Resize(SimulationAllocationSizes)
   href: api/BepuPhysics.Simulation.html#BepuPhysics_Simulation_Resize_BepuPhysics_SimulationAllocationSizes_
@@ -43051,15 +43170,15 @@ references:
   commentId: T:BepuPhysics.Trees.IBatchedRayLeafTester
   fullName: BepuPhysics.Trees.IBatchedRayLeafTester
   nameWithType: IBatchedRayLeafTester
-- uid: BepuPhysics.Trees.IBatchedRayLeafTester.RayTest(System.Int32,BepuPhysics.Trees.RaySource@)
-  name: RayTest(int, ref RaySource)
-  href: api/BepuPhysics.Trees.IBatchedRayLeafTester.html#BepuPhysics_Trees_IBatchedRayLeafTester_RayTest_System_Int32_BepuPhysics_Trees_RaySource__
-  commentId: M:BepuPhysics.Trees.IBatchedRayLeafTester.RayTest(System.Int32,BepuPhysics.Trees.RaySource@)
-  name.vb: RayTest(Integer, RaySource)
-  fullName: BepuPhysics.Trees.IBatchedRayLeafTester.RayTest(int, ref BepuPhysics.Trees.RaySource)
-  fullName.vb: BepuPhysics.Trees.IBatchedRayLeafTester.RayTest(Integer, BepuPhysics.Trees.RaySource)
-  nameWithType: IBatchedRayLeafTester.RayTest(int, ref RaySource)
-  nameWithType.vb: IBatchedRayLeafTester.RayTest(Integer, RaySource)
+- uid: BepuPhysics.Trees.IBatchedRayLeafTester.RayTest(System.Int32,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool)
+  name: RayTest(int, ref RaySource, BufferPool)
+  href: api/BepuPhysics.Trees.IBatchedRayLeafTester.html#BepuPhysics_Trees_IBatchedRayLeafTester_RayTest_System_Int32_BepuPhysics_Trees_RaySource__BepuUtilities_Memory_BufferPool_
+  commentId: M:BepuPhysics.Trees.IBatchedRayLeafTester.RayTest(System.Int32,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool)
+  name.vb: RayTest(Integer, RaySource, BufferPool)
+  fullName: BepuPhysics.Trees.IBatchedRayLeafTester.RayTest(int, ref BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool)
+  fullName.vb: BepuPhysics.Trees.IBatchedRayLeafTester.RayTest(Integer, BepuPhysics.Trees.RaySource, BepuUtilities.Memory.BufferPool)
+  nameWithType: IBatchedRayLeafTester.RayTest(int, ref RaySource, BufferPool)
+  nameWithType.vb: IBatchedRayLeafTester.RayTest(Integer, RaySource, BufferPool)
 - uid: BepuPhysics.Trees.IBatchedRayLeafTester.RayTest*
   name: RayTest
   href: api/BepuPhysics.Trees.IBatchedRayLeafTester.html#BepuPhysics_Trees_IBatchedRayLeafTester_RayTest_
@@ -43095,15 +43214,15 @@ references:
   commentId: T:BepuPhysics.Trees.IRayLeafTester
   fullName: BepuPhysics.Trees.IRayLeafTester
   nameWithType: IRayLeafTester
-- uid: BepuPhysics.Trees.IRayLeafTester.TestLeaf(System.Int32,BepuPhysics.Trees.RayData*,System.Single*)
-  name: TestLeaf(int, RayData*, float*)
-  href: api/BepuPhysics.Trees.IRayLeafTester.html#BepuPhysics_Trees_IRayLeafTester_TestLeaf_System_Int32_BepuPhysics_Trees_RayData__System_Single__
-  commentId: M:BepuPhysics.Trees.IRayLeafTester.TestLeaf(System.Int32,BepuPhysics.Trees.RayData*,System.Single*)
-  name.vb: TestLeaf(Integer, RayData*, Single*)
-  fullName: BepuPhysics.Trees.IRayLeafTester.TestLeaf(int, BepuPhysics.Trees.RayData*, float*)
-  fullName.vb: BepuPhysics.Trees.IRayLeafTester.TestLeaf(Integer, BepuPhysics.Trees.RayData*, Single*)
-  nameWithType: IRayLeafTester.TestLeaf(int, RayData*, float*)
-  nameWithType.vb: IRayLeafTester.TestLeaf(Integer, RayData*, Single*)
+- uid: BepuPhysics.Trees.IRayLeafTester.TestLeaf(System.Int32,BepuPhysics.Trees.RayData*,System.Single*,BepuUtilities.Memory.BufferPool)
+  name: TestLeaf(int, RayData*, float*, BufferPool)
+  href: api/BepuPhysics.Trees.IRayLeafTester.html#BepuPhysics_Trees_IRayLeafTester_TestLeaf_System_Int32_BepuPhysics_Trees_RayData__System_Single__BepuUtilities_Memory_BufferPool_
+  commentId: M:BepuPhysics.Trees.IRayLeafTester.TestLeaf(System.Int32,BepuPhysics.Trees.RayData*,System.Single*,BepuUtilities.Memory.BufferPool)
+  name.vb: TestLeaf(Integer, RayData*, Single*, BufferPool)
+  fullName: BepuPhysics.Trees.IRayLeafTester.TestLeaf(int, BepuPhysics.Trees.RayData*, float*, BepuUtilities.Memory.BufferPool)
+  fullName.vb: BepuPhysics.Trees.IRayLeafTester.TestLeaf(Integer, BepuPhysics.Trees.RayData*, Single*, BepuUtilities.Memory.BufferPool)
+  nameWithType: IRayLeafTester.TestLeaf(int, RayData*, float*, BufferPool)
+  nameWithType.vb: IRayLeafTester.TestLeaf(Integer, RayData*, Single*, BufferPool)
 - uid: BepuPhysics.Trees.IRayLeafTester.TestLeaf*
   name: TestLeaf
   href: api/BepuPhysics.Trees.IRayLeafTester.html#BepuPhysics_Trees_IRayLeafTester_TestLeaf_
@@ -43589,19 +43708,6 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.Trees.Tree.Add
   nameWithType: Tree.Add
-- uid: BepuPhysics.Trees.Tree.AddWithBottomUpRefinement(BepuUtilities.BoundingBox,BepuUtilities.Memory.BufferPool)
-  name: AddWithBottomUpRefinement(BoundingBox, BufferPool)
-  href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_AddWithBottomUpRefinement_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool_
-  commentId: M:BepuPhysics.Trees.Tree.AddWithBottomUpRefinement(BepuUtilities.BoundingBox,BepuUtilities.Memory.BufferPool)
-  fullName: BepuPhysics.Trees.Tree.AddWithBottomUpRefinement(BepuUtilities.BoundingBox, BepuUtilities.Memory.BufferPool)
-  nameWithType: Tree.AddWithBottomUpRefinement(BoundingBox, BufferPool)
-- uid: BepuPhysics.Trees.Tree.AddWithBottomUpRefinement*
-  name: AddWithBottomUpRefinement
-  href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_AddWithBottomUpRefinement_
-  commentId: Overload:BepuPhysics.Trees.Tree.AddWithBottomUpRefinement
-  isSpec: "True"
-  fullName: BepuPhysics.Trees.Tree.AddWithBottomUpRefinement
-  nameWithType: Tree.AddWithBottomUpRefinement
 - uid: BepuPhysics.Trees.Tree.AddWithoutRefinement(BepuUtilities.BoundingBox,BepuUtilities.Memory.BufferPool)
   name: AddWithoutRefinement(BoundingBox, BufferPool)
   href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_AddWithoutRefinement_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool_
@@ -43909,24 +44015,24 @@ references:
   fullName.vb: BepuPhysics.Trees.Tree.GetOverlaps(Of TOverlapHandler)(BepuPhysics.Trees.Tree, TOverlapHandler)
   nameWithType: Tree.GetOverlaps<TOverlapHandler>(ref Tree, ref TOverlapHandler)
   nameWithType.vb: Tree.GetOverlaps(Of TOverlapHandler)(Tree, TOverlapHandler)
-- uid: BepuPhysics.Trees.Tree.GetOverlaps``1(BepuUtilities.BoundingBox,``0@)
-  name: GetOverlaps<TEnumerator>(BoundingBox, ref TEnumerator)
-  href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_GetOverlaps__1_BepuUtilities_BoundingBox___0__
-  commentId: M:BepuPhysics.Trees.Tree.GetOverlaps``1(BepuUtilities.BoundingBox,``0@)
-  name.vb: GetOverlaps(Of TEnumerator)(BoundingBox, TEnumerator)
-  fullName: BepuPhysics.Trees.Tree.GetOverlaps<TEnumerator>(BepuUtilities.BoundingBox, ref TEnumerator)
-  fullName.vb: BepuPhysics.Trees.Tree.GetOverlaps(Of TEnumerator)(BepuUtilities.BoundingBox, TEnumerator)
-  nameWithType: Tree.GetOverlaps<TEnumerator>(BoundingBox, ref TEnumerator)
-  nameWithType.vb: Tree.GetOverlaps(Of TEnumerator)(BoundingBox, TEnumerator)
-- uid: BepuPhysics.Trees.Tree.GetOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,``0@)
-  name: GetOverlaps<TEnumerator>(Vector3, Vector3, ref TEnumerator)
-  href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_GetOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3___0__
-  commentId: M:BepuPhysics.Trees.Tree.GetOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,``0@)
-  name.vb: GetOverlaps(Of TEnumerator)(Vector3, Vector3, TEnumerator)
-  fullName: BepuPhysics.Trees.Tree.GetOverlaps<TEnumerator>(System.Numerics.Vector3, System.Numerics.Vector3, ref TEnumerator)
-  fullName.vb: BepuPhysics.Trees.Tree.GetOverlaps(Of TEnumerator)(System.Numerics.Vector3, System.Numerics.Vector3, TEnumerator)
-  nameWithType: Tree.GetOverlaps<TEnumerator>(Vector3, Vector3, ref TEnumerator)
-  nameWithType.vb: Tree.GetOverlaps(Of TEnumerator)(Vector3, Vector3, TEnumerator)
+- uid: BepuPhysics.Trees.Tree.GetOverlaps``1(BepuUtilities.BoundingBox,BepuUtilities.Memory.BufferPool,``0@)
+  name: GetOverlaps<TEnumerator>(BoundingBox, BufferPool, ref TEnumerator)
+  href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_GetOverlaps__1_BepuUtilities_BoundingBox_BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Trees.Tree.GetOverlaps``1(BepuUtilities.BoundingBox,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: GetOverlaps(Of TEnumerator)(BoundingBox, BufferPool, TEnumerator)
+  fullName: BepuPhysics.Trees.Tree.GetOverlaps<TEnumerator>(BepuUtilities.BoundingBox, BepuUtilities.Memory.BufferPool, ref TEnumerator)
+  fullName.vb: BepuPhysics.Trees.Tree.GetOverlaps(Of TEnumerator)(BepuUtilities.BoundingBox, BepuUtilities.Memory.BufferPool, TEnumerator)
+  nameWithType: Tree.GetOverlaps<TEnumerator>(BoundingBox, BufferPool, ref TEnumerator)
+  nameWithType.vb: Tree.GetOverlaps(Of TEnumerator)(BoundingBox, BufferPool, TEnumerator)
+- uid: BepuPhysics.Trees.Tree.GetOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,``0@)
+  name: GetOverlaps<TEnumerator>(Vector3, Vector3, BufferPool, ref TEnumerator)
+  href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_GetOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Trees.Tree.GetOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: GetOverlaps(Of TEnumerator)(Vector3, Vector3, BufferPool, TEnumerator)
+  fullName: BepuPhysics.Trees.Tree.GetOverlaps<TEnumerator>(System.Numerics.Vector3, System.Numerics.Vector3, BepuUtilities.Memory.BufferPool, ref TEnumerator)
+  fullName.vb: BepuPhysics.Trees.Tree.GetOverlaps(Of TEnumerator)(System.Numerics.Vector3, System.Numerics.Vector3, BepuUtilities.Memory.BufferPool, TEnumerator)
+  nameWithType: Tree.GetOverlaps<TEnumerator>(Vector3, Vector3, BufferPool, ref TEnumerator)
+  nameWithType.vb: Tree.GetOverlaps(Of TEnumerator)(Vector3, Vector3, BufferPool, TEnumerator)
 - uid: BepuPhysics.Trees.Tree.GetSelfOverlaps*
   name: GetSelfOverlaps
   href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_GetSelfOverlaps_
@@ -44442,15 +44548,15 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.Trees.Tree.RayCast
   nameWithType: Tree.RayCast
-- uid: BepuPhysics.Trees.Tree.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single@,``0@,System.Int32)
-  name: RayCast<TLeafTester>(Vector3, Vector3, ref float, ref TLeafTester, int)
-  href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_RayCast__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Single____0__System_Int32_
-  commentId: M:BepuPhysics.Trees.Tree.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single@,``0@,System.Int32)
-  name.vb: RayCast(Of TLeafTester)(Vector3, Vector3, Single, TLeafTester, Integer)
-  fullName: BepuPhysics.Trees.Tree.RayCast<TLeafTester>(System.Numerics.Vector3, System.Numerics.Vector3, ref float, ref TLeafTester, int)
-  fullName.vb: BepuPhysics.Trees.Tree.RayCast(Of TLeafTester)(System.Numerics.Vector3, System.Numerics.Vector3, Single, TLeafTester, Integer)
-  nameWithType: Tree.RayCast<TLeafTester>(Vector3, Vector3, ref float, ref TLeafTester, int)
-  nameWithType.vb: Tree.RayCast(Of TLeafTester)(Vector3, Vector3, Single, TLeafTester, Integer)
+- uid: BepuPhysics.Trees.Tree.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single@,BepuUtilities.Memory.BufferPool,``0@,System.Int32)
+  name: RayCast<TLeafTester>(Vector3, Vector3, ref float, BufferPool, ref TLeafTester, int)
+  href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_RayCast__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Single__BepuUtilities_Memory_BufferPool___0__System_Int32_
+  commentId: M:BepuPhysics.Trees.Tree.RayCast``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Single@,BepuUtilities.Memory.BufferPool,``0@,System.Int32)
+  name.vb: RayCast(Of TLeafTester)(Vector3, Vector3, Single, BufferPool, TLeafTester, Integer)
+  fullName: BepuPhysics.Trees.Tree.RayCast<TLeafTester>(System.Numerics.Vector3, System.Numerics.Vector3, ref float, BepuUtilities.Memory.BufferPool, ref TLeafTester, int)
+  fullName.vb: BepuPhysics.Trees.Tree.RayCast(Of TLeafTester)(System.Numerics.Vector3, System.Numerics.Vector3, Single, BepuUtilities.Memory.BufferPool, TLeafTester, Integer)
+  nameWithType: Tree.RayCast<TLeafTester>(Vector3, Vector3, ref float, BufferPool, ref TLeafTester, int)
+  nameWithType.vb: Tree.RayCast(Of TLeafTester)(Vector3, Vector3, Single, BufferPool, TLeafTester, Integer)
 - uid: BepuPhysics.Trees.Tree.Refine2(System.Int32,System.Int32@,System.Int32,System.Int32,BepuUtilities.Memory.BufferPool,BepuUtilities.IThreadDispatcher,BepuUtilities.TaskScheduling.TaskStack*,System.Int32,System.Int32,System.Boolean,System.Boolean)
   name: Refine2(int, ref int, int, int, BufferPool, IThreadDispatcher, TaskStack*, int, int, bool, bool)
   href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Refine2_System_Int32_System_Int32__System_Int32_System_Int32_BepuUtilities_Memory_BufferPool_BepuUtilities_IThreadDispatcher_BepuUtilities_TaskScheduling_TaskStack__System_Int32_System_Int32_System_Boolean_System_Boolean_
@@ -44849,24 +44955,24 @@ references:
   isSpec: "True"
   fullName: BepuPhysics.Trees.Tree.SweepBuild
   nameWithType: Tree.SweepBuild
-- uid: BepuPhysics.Trees.Tree.Sweep``1(BepuUtilities.BoundingBox@,System.Numerics.Vector3,System.Single,``0@)
-  name: Sweep<TLeafTester>(in BoundingBox, Vector3, float, ref TLeafTester)
-  href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Sweep__1_BepuUtilities_BoundingBox__System_Numerics_Vector3_System_Single___0__
-  commentId: M:BepuPhysics.Trees.Tree.Sweep``1(BepuUtilities.BoundingBox@,System.Numerics.Vector3,System.Single,``0@)
-  name.vb: Sweep(Of TLeafTester)(BoundingBox, Vector3, Single, TLeafTester)
-  fullName: BepuPhysics.Trees.Tree.Sweep<TLeafTester>(in BepuUtilities.BoundingBox, System.Numerics.Vector3, float, ref TLeafTester)
-  fullName.vb: BepuPhysics.Trees.Tree.Sweep(Of TLeafTester)(BepuUtilities.BoundingBox, System.Numerics.Vector3, Single, TLeafTester)
-  nameWithType: Tree.Sweep<TLeafTester>(in BoundingBox, Vector3, float, ref TLeafTester)
-  nameWithType.vb: Tree.Sweep(Of TLeafTester)(BoundingBox, Vector3, Single, TLeafTester)
-- uid: BepuPhysics.Trees.Tree.Sweep``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,``0@)
-  name: Sweep<TLeafTester>(Vector3, Vector3, Vector3, float, ref TLeafTester)
-  href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Sweep__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single___0__
-  commentId: M:BepuPhysics.Trees.Tree.Sweep``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,``0@)
-  name.vb: Sweep(Of TLeafTester)(Vector3, Vector3, Vector3, Single, TLeafTester)
-  fullName: BepuPhysics.Trees.Tree.Sweep<TLeafTester>(System.Numerics.Vector3, System.Numerics.Vector3, System.Numerics.Vector3, float, ref TLeafTester)
-  fullName.vb: BepuPhysics.Trees.Tree.Sweep(Of TLeafTester)(System.Numerics.Vector3, System.Numerics.Vector3, System.Numerics.Vector3, Single, TLeafTester)
-  nameWithType: Tree.Sweep<TLeafTester>(Vector3, Vector3, Vector3, float, ref TLeafTester)
-  nameWithType.vb: Tree.Sweep(Of TLeafTester)(Vector3, Vector3, Vector3, Single, TLeafTester)
+- uid: BepuPhysics.Trees.Tree.Sweep``1(BepuUtilities.BoundingBox@,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,``0@)
+  name: Sweep<TLeafTester>(in BoundingBox, Vector3, float, BufferPool, ref TLeafTester)
+  href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Sweep__1_BepuUtilities_BoundingBox__System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Trees.Tree.Sweep``1(BepuUtilities.BoundingBox@,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: Sweep(Of TLeafTester)(BoundingBox, Vector3, Single, BufferPool, TLeafTester)
+  fullName: BepuPhysics.Trees.Tree.Sweep<TLeafTester>(in BepuUtilities.BoundingBox, System.Numerics.Vector3, float, BepuUtilities.Memory.BufferPool, ref TLeafTester)
+  fullName.vb: BepuPhysics.Trees.Tree.Sweep(Of TLeafTester)(BepuUtilities.BoundingBox, System.Numerics.Vector3, Single, BepuUtilities.Memory.BufferPool, TLeafTester)
+  nameWithType: Tree.Sweep<TLeafTester>(in BoundingBox, Vector3, float, BufferPool, ref TLeafTester)
+  nameWithType.vb: Tree.Sweep(Of TLeafTester)(BoundingBox, Vector3, Single, BufferPool, TLeafTester)
+- uid: BepuPhysics.Trees.Tree.Sweep``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,``0@)
+  name: Sweep<TLeafTester>(Vector3, Vector3, Vector3, float, BufferPool, ref TLeafTester)
+  href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Sweep__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool___0__
+  commentId: M:BepuPhysics.Trees.Tree.Sweep``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,``0@)
+  name.vb: Sweep(Of TLeafTester)(Vector3, Vector3, Vector3, Single, BufferPool, TLeafTester)
+  fullName: BepuPhysics.Trees.Tree.Sweep<TLeafTester>(System.Numerics.Vector3, System.Numerics.Vector3, System.Numerics.Vector3, float, BepuUtilities.Memory.BufferPool, ref TLeafTester)
+  fullName.vb: BepuPhysics.Trees.Tree.Sweep(Of TLeafTester)(System.Numerics.Vector3, System.Numerics.Vector3, System.Numerics.Vector3, Single, BepuUtilities.Memory.BufferPool, TLeafTester)
+  nameWithType: Tree.Sweep<TLeafTester>(Vector3, Vector3, Vector3, float, BufferPool, ref TLeafTester)
+  nameWithType.vb: Tree.Sweep(Of TLeafTester)(Vector3, Vector3, Vector3, Single, BufferPool, TLeafTester)
 - uid: BepuPhysics.Trees.Tree.Times
   name: Times
   href: api/BepuPhysics.Trees.Tree.html#BepuPhysics_Trees_Tree_Times

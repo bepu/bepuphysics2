@@ -418,7 +418,7 @@ Class ShapeBatch  <a class="header-action link-secondary" title="View source" hr
 
   <h3 id="BepuPhysics_Collidables_ShapeBatch_Clear" data-uid="BepuPhysics.Collidables.ShapeBatch.Clear">
   Clear()
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L96"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L115"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Frees all shape slots without returning any resources to the pool.</p>
@@ -589,7 +589,7 @@ Class ShapeBatch  <a class="header-action link-secondary" title="View source" hr
 
   <h3 id="BepuPhysics_Collidables_ShapeBatch_Dispose" data-uid="BepuPhysics.Collidables.ShapeBatch.Dispose">
   Dispose()
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L111"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L130"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Returns all backing resources to the pool, leaving the batch in an unusable state.</p>
@@ -649,7 +649,7 @@ Class ShapeBatch  <a class="header-action link-secondary" title="View source" hr
 
   <h3 id="BepuPhysics_Collidables_ShapeBatch_EnsureCapacity_System_Int32_" data-uid="BepuPhysics.Collidables.ShapeBatch.EnsureCapacity(System.Int32)">
   EnsureCapacity(int)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L101"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L120"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Increases the size of the type batch if necessary to hold the target capacity.</p>
@@ -682,7 +682,7 @@ Class ShapeBatch  <a class="header-action link-secondary" title="View source" hr
 
   <h3 id="BepuPhysics_Collidables_ShapeBatch_GetShapeData_System_Int32_System_Void___System_Int32__" data-uid="BepuPhysics.Collidables.ShapeBatch.GetShapeData(System.Int32,System.Void*@,System.Int32@)">
   GetShapeData(int, out void*, out int)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L84"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L103"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Gets a raw untyped pointer to a shape's data.</p>
@@ -719,37 +719,47 @@ Class ShapeBatch  <a class="header-action link-secondary" title="View source" hr
 
   <a id="BepuPhysics_Collidables_ShapeBatch_RayTest_" data-uid="BepuPhysics.Collidables.ShapeBatch.RayTest*"></a>
 
-  <h3 id="BepuPhysics_Collidables_ShapeBatch_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single____0__" data-uid="BepuPhysics.Collidables.ShapeBatch.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,``0@)">
-  RayTest&lt;TRayHitHandler&gt;(int, in RigidPose, in RayData, ref float, ref TRayHitHandler)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L75"><i class="bi bi-code-slash"></i></a>
+  <h3 id="BepuPhysics_Collidables_ShapeBatch_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuUtilities_Memory_BufferPool___0__" data-uid="BepuPhysics.Collidables.ShapeBatch.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuUtilities.Memory.BufferPool,``0@)">
+  RayTest&lt;TRayHitHandler&gt;(int, in RigidPose, in RayData, ref float, BufferPool, ref TRayHitHandler)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L85"><i class="bi bi-code-slash"></i></a>
   </h3>
 
-  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 summary"><p>Tests a ray against a shape in the batch.</p>
+</div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public abstract void RayTest&lt;TRayHitHandler&gt;(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
+    <pre><code class="lang-csharp hljs">public abstract void RayTest&lt;TRayHitHandler&gt;(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>shapeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd></dd>
+    <dd><p>Index of the shape in the batch to test.</p>
+</dd>
     <dt><code>pose</code> <a class="xref" href="BepuPhysics.RigidPose.html">RigidPose</a></dt>
-    <dd></dd>
+    <dd><p>Pose of the shape to use for the test.</p>
+</dd>
     <dt><code>ray</code> <a class="xref" href="BepuPhysics.Trees.RayData.html">RayData</a></dt>
-    <dd></dd>
+    <dd><p>Ray to test against the shape.</p>
+</dd>
     <dt><code>maximumT</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
-    <dd></dd>
+    <dd><p>The maximum parametric distance along the line. May be mutated by the hit handler.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for temporary allocations required by the test, if any.</p>
+</dd>
     <dt><code>hitHandler</code> <span class="xref">TRayHitHandler</span></dt>
-    <dd></dd>
+    <dd><p>Hit handler that will process the reported hits.</p>
+</dd>
   </dl>
 
 
   <h4 class="section">Type Parameters</h4>
   <dl class="parameters">
     <dt><code>TRayHitHandler</code></dt>
-    <dd></dd>
+    <dd><p>Type of the hit handler that will have results reported to it.</p>
+</dd>
   </dl>
 
 
@@ -763,35 +773,44 @@ Class ShapeBatch  <a class="header-action link-secondary" title="View source" hr
 
   <a id="BepuPhysics_Collidables_ShapeBatch_RayTest_" data-uid="BepuPhysics.Collidables.ShapeBatch.RayTest*"></a>
 
-  <h3 id="BepuPhysics_Collidables_ShapeBatch_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource____0__" data-uid="BepuPhysics.Collidables.ShapeBatch.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,``0@)">
-  RayTest&lt;TRayHitHandler&gt;(int, in RigidPose, ref RaySource, ref TRayHitHandler)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L76"><i class="bi bi-code-slash"></i></a>
+  <h3 id="BepuPhysics_Collidables_ShapeBatch_RayTest__1_System_Int32_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuUtilities_Memory_BufferPool___0__" data-uid="BepuPhysics.Collidables.ShapeBatch.RayTest``1(System.Int32,BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool,``0@)">
+  RayTest&lt;TRayHitHandler&gt;(int, in RigidPose, ref RaySource, BufferPool, ref TRayHitHandler)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L95"><i class="bi bi-code-slash"></i></a>
   </h3>
 
-  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 summary"><p>Tests a bunch of rays against a shape in the batch.</p>
+</div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public abstract void RayTest&lt;TRayHitHandler&gt;(int shapeIndex, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
+    <pre><code class="lang-csharp hljs">public abstract void RayTest&lt;TRayHitHandler&gt;(int shapeIndex, in RigidPose pose, ref RaySource rays, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>shapeIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd></dd>
+    <dd><p>Index of the shape in the batch to test.</p>
+</dd>
     <dt><code>pose</code> <a class="xref" href="BepuPhysics.RigidPose.html">RigidPose</a></dt>
-    <dd></dd>
+    <dd><p>Pose of the shape to use for the test.</p>
+</dd>
     <dt><code>rays</code> <a class="xref" href="BepuPhysics.Trees.RaySource.html">RaySource</a></dt>
-    <dd></dd>
+    <dd><p>Rays to test against the shape.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for temporary allocations required by the test, if any.</p>
+</dd>
     <dt><code>hitHandler</code> <span class="xref">TRayHitHandler</span></dt>
-    <dd></dd>
+    <dd><p>Hit handler that will process the reported hits.</p>
+</dd>
   </dl>
 
 
   <h4 class="section">Type Parameters</h4>
   <dl class="parameters">
     <dt><code>TRayHitHandler</code></dt>
-    <dd></dd>
+    <dd><p>Type of the hit handler that will have results reported to it.</p>
+</dd>
   </dl>
 
 
@@ -941,7 +960,7 @@ Class ShapeBatch  <a class="header-action link-secondary" title="View source" hr
 
   <h3 id="BepuPhysics_Collidables_ShapeBatch_Resize_System_Int32_" data-uid="BepuPhysics.Collidables.ShapeBatch.Resize(System.Int32)">
   Resize(int)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L107"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L126"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Changes the size of the type batch if the target capacity is different than the current capacity. Note that shrinking allocations is conservative; resizing will
@@ -975,7 +994,7 @@ never allow an existing shape to point to unallocated memory.</p>
 
   <h3 id="BepuPhysics_Collidables_ShapeBatch_ResizeIdPool_System_Int32_" data-uid="BepuPhysics.Collidables.ShapeBatch.ResizeIdPool(System.Int32)">
   ResizeIdPool(int)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L117"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Shapes.cs/#L136"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Shrinks or expands the allocation of the batch's id pool. Note that shrinking allocations is conservative; resizing will never allow any pending ids to be lost.</p>

@@ -2092,10 +2092,30 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/BepuPhysics.CollisionDetection.MeshReduction.yml",
       "output": {
         ".html": {
           "relative_path": "api/BepuPhysics.CollisionDetection.MeshReduction.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/BepuPhysics.CollisionDetection.MeshReductionThunks-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/BepuPhysics.CollisionDetection.MeshReductionThunks-1.html"
         }
       },
       "version": ""

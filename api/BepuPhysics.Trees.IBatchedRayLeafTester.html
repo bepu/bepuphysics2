@@ -114,7 +114,7 @@ Interface IBatchedRayLeafTester  <a class="header-action link-secondary" title="
     <dt>Inherited Members</dt>
     <dd>
     <div>
-      <a class="xref" href="BepuPhysics.Trees.IRayLeafTester.html#BepuPhysics_Trees_IRayLeafTester_TestLeaf_System_Int32_BepuPhysics_Trees_RayData__System_Single__">IRayLeafTester.TestLeaf(int, RayData*, float*)</a>
+      <a class="xref" href="BepuPhysics.Trees.IRayLeafTester.html#BepuPhysics_Trees_IRayLeafTester_TestLeaf_System_Int32_BepuPhysics_Trees_RayData__System_Single__BepuUtilities_Memory_BufferPool_">IRayLeafTester.TestLeaf(int, RayData*, float*, BufferPool)</a>
     </div>
   </dd></dl>
 
@@ -129,8 +129,8 @@ Interface IBatchedRayLeafTester  <a class="header-action link-secondary" title="
 
   <a id="BepuPhysics_Trees_IBatchedRayLeafTester_RayTest_" data-uid="BepuPhysics.Trees.IBatchedRayLeafTester.RayTest*"></a>
 
-  <h3 id="BepuPhysics_Trees_IBatchedRayLeafTester_RayTest_System_Int32_BepuPhysics_Trees_RaySource__" data-uid="BepuPhysics.Trees.IBatchedRayLeafTester.RayTest(System.Int32,BepuPhysics.Trees.RaySource@)">
-  RayTest(int, ref RaySource)
+  <h3 id="BepuPhysics_Trees_IBatchedRayLeafTester_RayTest_System_Int32_BepuPhysics_Trees_RaySource__BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Trees.IBatchedRayLeafTester.RayTest(System.Int32,BepuPhysics.Trees.RaySource@,BepuUtilities.Memory.BufferPool)">
+  RayTest(int, ref RaySource, BufferPool)
   <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Trees/RayBatcher.cs/#L118"><i class="bi bi-code-slash"></i></a>
   </h3>
 
@@ -138,7 +138,7 @@ Interface IBatchedRayLeafTester  <a class="header-action link-secondary" title="
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">void RayTest(int leafIndex, ref RaySource rays)</code></pre>
+    <pre><code class="lang-csharp hljs">void RayTest(int leafIndex, ref RaySource rays, BufferPool pool)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -146,6 +146,8 @@ Interface IBatchedRayLeafTester  <a class="header-action link-secondary" title="
     <dt><code>leafIndex</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
     <dd></dd>
     <dt><code>rays</code> <a class="xref" href="BepuPhysics.Trees.RaySource.html">RaySource</a></dt>
+    <dd></dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
     <dd></dd>
   </dl>
 

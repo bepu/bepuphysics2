@@ -223,7 +223,7 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
 
   <h3 id="BepuPhysics_Collidables_Compound_Id" data-uid="BepuPhysics.Collidables.Compound.Id">
   Id
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L389"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L407"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Type id of list based compound shapes.</p>
@@ -291,7 +291,7 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
 
   <h3 id="BepuPhysics_Collidables_Compound_TypeId" data-uid="BepuPhysics.Collidables.Compound.TypeId">
   TypeId
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L390"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L408"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Unique type id for this shape type.</p>
@@ -406,8 +406,8 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
 
   <a id="BepuPhysics_Collidables_Compound_AddChildBoundsToBatcher_" data-uid="BepuPhysics.Collidables.Compound.AddChildBoundsToBatcher*"></a>
 
-  <h3 id="BepuPhysics_Collidables_Compound_AddChildBoundsToBatcher_BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_CompoundChild___BepuPhysics_BoundingBoxBatcher__BepuPhysics_RigidPose__BepuPhysics_BodyVelocity__System_Int32_" data-uid="BepuPhysics.Collidables.Compound.AddChildBoundsToBatcher(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.CompoundChild}@,BepuPhysics.BoundingBoxBatcher@,BepuPhysics.RigidPose@,BepuPhysics.BodyVelocity@,System.Int32)">
-  AddChildBoundsToBatcher(ref Buffer&lt;CompoundChild&gt;, ref BoundingBoxBatcher, in RigidPose, in BodyVelocity, int)
+  <h3 id="BepuPhysics_Collidables_Compound_AddChildBoundsToBatcher_BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_CompoundChild__BepuPhysics_BoundingBoxBatcher__BepuPhysics_RigidPose__BepuPhysics_BodyVelocity__System_Int32_" data-uid="BepuPhysics.Collidables.Compound.AddChildBoundsToBatcher(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.CompoundChild},BepuPhysics.BoundingBoxBatcher@,BepuPhysics.RigidPose@,BepuPhysics.BodyVelocity@,System.Int32)">
+  AddChildBoundsToBatcher(Buffer&lt;CompoundChild&gt;, ref BoundingBoxBatcher, in RigidPose, in BodyVelocity, int)
   <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L197"><i class="bi bi-code-slash"></i></a>
   </h3>
 
@@ -415,7 +415,7 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static void AddChildBoundsToBatcher(ref Buffer&lt;CompoundChild&gt; children, ref BoundingBoxBatcher batcher, in RigidPose pose, in BodyVelocity velocity, int bodyIndex)</code></pre>
+    <pre><code class="lang-csharp hljs">public static void AddChildBoundsToBatcher(Buffer&lt;CompoundChild&gt; children, ref BoundingBoxBatcher batcher, in RigidPose pose, in BodyVelocity velocity, int bodyIndex)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -528,7 +528,7 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
 
   <h3 id="BepuPhysics_Collidables_Compound_ComputeInertia_System_Span_System_Single__BepuPhysics_Collidables_Shapes_" data-uid="BepuPhysics.Collidables.Compound.ComputeInertia(System.Span{System.Single},BepuPhysics.Collidables.Shapes)">
   ComputeInertia(Span&lt;float&gt;, Shapes)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L364"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L382"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Computes the inertia of a compound. Does not recenter the child poses.</p>
@@ -570,7 +570,7 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
 
   <h3 id="BepuPhysics_Collidables_Compound_ComputeInertia_System_Span_System_Single__BepuPhysics_Collidables_Shapes_System_Numerics_Vector3__" data-uid="BepuPhysics.Collidables.Compound.ComputeInertia(System.Span{System.Single},BepuPhysics.Collidables.Shapes,System.Numerics.Vector3@)">
   ComputeInertia(Span&lt;float&gt;, Shapes, out Vector3)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L376"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L394"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Computes the inertia of a compound. Recenters the child poses around the calculated center of mass.</p>
@@ -662,7 +662,7 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
 
   <h3 id="BepuPhysics_Collidables_Compound_Dispose_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.Collidables.Compound.Dispose(BepuUtilities.Memory.BufferPool)">
   Dispose(BufferPool)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L381"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L399"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Returns all resources used by the shape instance to the given pool.</p>
@@ -692,9 +692,60 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
 
   <a id="BepuPhysics_Collidables_Compound_FindLocalOverlaps_" data-uid="BepuPhysics.Collidables.Compound.FindLocalOverlaps*"></a>
 
+  <h3 id="BepuPhysics_Collidables_Compound_FindLocalOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes___0__" data-uid="BepuPhysics.Collidables.Compound.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,``0@)">
+  FindLocalOverlaps&lt;TEnumerator&gt;(Vector3, Vector3, BufferPool, Shapes, ref TEnumerator)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L339"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Finds the indices of all children whose local-space bounding boxes overlap the given local-space AABB.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void FindLocalOverlaps&lt;TEnumerator&gt;(Vector3 min, Vector3 max, BufferPool pool, Shapes shapes, ref TEnumerator enumerator) where TEnumerator : IBreakableForEach&lt;int&gt;</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>min</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Minimum corner of the query AABB in the compound's local space.</p>
+</dd>
+    <dt><code>max</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a></dt>
+    <dd><p>Maximum corner of the query AABB in the compound's local space.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Pool used for any temporary allocations during traversal.</p>
+</dd>
+    <dt><code>shapes</code> <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a></dt>
+    <dd><p>Shape collection used to look up child bounds for compounds with heterogeneous children. May be null for homogeneous compounds that don't require it.</p>
+</dd>
+    <dt><code>enumerator</code> <span class="xref">TEnumerator</span></dt>
+    <dd><p>Enumerator that receives the indices of overlapping children.</p>
+</dd>
+  </dl>
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TEnumerator</code></dt>
+    <dd><p>Type of the enumerator that receives child indices.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="BepuPhysics_Collidables_Compound_FindLocalOverlaps_" data-uid="BepuPhysics.Collidables.Compound.FindLocalOverlaps*"></a>
+
   <h3 id="BepuPhysics_Collidables_Compound_FindLocalOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes_System_Void__" data-uid="BepuPhysics.Collidables.Compound.FindLocalOverlaps``1(System.Numerics.Vector3,System.Numerics.Vector3,System.Numerics.Vector3,System.Single,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,System.Void*)">
   FindLocalOverlaps&lt;TOverlaps&gt;(Vector3, Vector3, Vector3, float, BufferPool, Shapes, void*)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L339"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L357"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"></div>
@@ -1041,8 +1092,8 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
 
   <a id="BepuPhysics_Collidables_Compound_RayTest_" data-uid="BepuPhysics.Collidables.Compound.RayTest*"></a>
 
-  <h3 id="BepuPhysics_Collidables_Compound_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuPhysics_Collidables_Shapes___0__" data-uid="BepuPhysics.Collidables.Compound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,``0@)">
-  RayTest&lt;TRayHitHandler&gt;(in RigidPose, in RayData, ref float, Shapes, ref TRayHitHandler)
+  <h3 id="BepuPhysics_Collidables_Compound_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool___0__" data-uid="BepuPhysics.Collidables.Compound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)">
+  RayTest&lt;TRayHitHandler&gt;(in RigidPose, in RayData, ref float, Shapes, BufferPool, ref TRayHitHandler)
   <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L229"><i class="bi bi-code-slash"></i></a>
   </h3>
 
@@ -1051,7 +1102,7 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public void RayTest&lt;TRayHitHandler&gt;(in RigidPose pose, in RayData ray, ref float maximumT, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
+    <pre><code class="lang-csharp hljs">public void RayTest&lt;TRayHitHandler&gt;(in RigidPose pose, in RayData ray, ref float maximumT, Shapes shapeBatches, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -1067,6 +1118,9 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
 </dd>
     <dt><code>shapeBatches</code> <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a></dt>
     <dd><p>Shape batches to look up child shapes in if necessary.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Buffer pool used for any temporary allocations required by the test.</p>
 </dd>
     <dt><code>hitHandler</code> <span class="xref">TRayHitHandler</span></dt>
     <dd><p>Callbacks called when the ray interacts with a test candidate.</p>
@@ -1091,8 +1145,8 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
 
   <a id="BepuPhysics_Collidables_Compound_RayTest_" data-uid="BepuPhysics.Collidables.Compound.RayTest*"></a>
 
-  <h3 id="BepuPhysics_Collidables_Compound_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuPhysics_Collidables_Shapes___0__" data-uid="BepuPhysics.Collidables.Compound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,``0@)">
-  RayTest&lt;TRayHitHandler&gt;(in RigidPose, ref RaySource, Shapes, ref TRayHitHandler)
+  <h3 id="BepuPhysics_Collidables_Compound_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool___0__" data-uid="BepuPhysics.Collidables.Compound.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)">
+  RayTest&lt;TRayHitHandler&gt;(in RigidPose, ref RaySource, Shapes, BufferPool, ref TRayHitHandler)
   <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/Compound.cs/#L256"><i class="bi bi-code-slash"></i></a>
   </h3>
 
@@ -1101,7 +1155,7 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public void RayTest&lt;TRayHitHandler&gt;(in RigidPose pose, ref RaySource rays, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
+    <pre><code class="lang-csharp hljs">public void RayTest&lt;TRayHitHandler&gt;(in RigidPose pose, ref RaySource rays, Shapes shapeBatches, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -1114,6 +1168,9 @@ Struct Compound  <a class="header-action link-secondary" title="View source" hre
 </dd>
     <dt><code>shapeBatches</code> <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a></dt>
     <dd><p>Shape batches to look up child shapes in if necessary.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Buffer pool used for any temporary allocations required by the test.</p>
 </dd>
     <dt><code>hitHandler</code> <span class="xref">TRayHitHandler</span></dt>
     <dd><p>Callbacks called when the ray interacts with a test candidate.</p>

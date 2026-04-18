@@ -180,6 +180,66 @@ Struct MeshReduction  <a class="header-action link-secondary" title="View source
 
 
 
+  <h3 id="BepuPhysics_CollisionDetection_MeshReduction_FindLocalOverlapsThunk" data-uid="BepuPhysics.CollisionDetection.MeshReduction.FindLocalOverlapsThunk">
+  FindLocalOverlapsThunk
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L38"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public delegate*&lt;void*, Vector3, Vector3, BufferPool, Shapes, ref MeshReduction.ChildEnumerator, void&gt; FindLocalOverlapsThunk</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt>delegate*&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>*, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a>, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a>, <span class="xref">BufferPool</span>, <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a>, ref <a class="xref" href="BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.html">ChildEnumerator</a>, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_CollisionDetection_MeshReduction_GetLocalChildThunk" data-uid="BepuPhysics.CollisionDetection.MeshReduction.GetLocalChildThunk">
+  GetLocalChildThunk
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L39"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public delegate*&lt;void*, int, out Triangle, void&gt; GetLocalChildThunk</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt>delegate*&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>*, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>, out <a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a>, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
   <h3 id="BepuPhysics_CollisionDetection_MeshReduction_Inner" data-uid="BepuPhysics.CollisionDetection.MeshReduction.Inner">
   Inner
   <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L30"><i class="bi bi-code-slash"></i></a>
@@ -212,7 +272,7 @@ Struct MeshReduction  <a class="header-action link-secondary" title="View source
 
   <h3 id="BepuPhysics_CollisionDetection_MeshReduction_Mesh" data-uid="BepuPhysics.CollisionDetection.MeshReduction.Mesh">
   Mesh
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L32"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L37"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"></div>
@@ -398,7 +458,7 @@ Struct MeshReduction  <a class="header-action link-secondary" title="View source
 
   <h3 id="BepuPhysics_CollisionDetection_MeshReduction_Create_System_Int32_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.CollisionDetection.MeshReduction.Create(System.Int32,BepuUtilities.Memory.BufferPool)">
   Create(int, BufferPool)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L34"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L41"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Creates a collision test continuation with the given number of slots for subpairs.</p>
@@ -433,7 +493,7 @@ Struct MeshReduction  <a class="header-action link-secondary" title="View source
 
   <h3 id="BepuPhysics_CollisionDetection_MeshReduction_OnChildCompleted__1_BepuPhysics_CollisionDetection_PairContinuation__BepuPhysics_CollisionDetection_ConvexContactManifold__BepuPhysics_CollisionDetection_CollisionBatcher___0___" data-uid="BepuPhysics.CollisionDetection.MeshReduction.OnChildCompleted``1(BepuPhysics.CollisionDetection.PairContinuation@,BepuPhysics.CollisionDetection.ConvexContactManifold@,BepuPhysics.CollisionDetection.CollisionBatcher{``0}@)">
   OnChildCompleted&lt;TCallbacks&gt;(ref PairContinuation, ref ConvexContactManifold, ref CollisionBatcher&lt;TCallbacks&gt;)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L39"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L46"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Handles what to do next when the child pair has finished execution and the resulting manifold is available.</p>
@@ -478,7 +538,7 @@ Struct MeshReduction  <a class="header-action link-secondary" title="View source
 
   <h3 id="BepuPhysics_CollisionDetection_MeshReduction_OnUntestedChildCompleted__1_BepuPhysics_CollisionDetection_PairContinuation__BepuPhysics_CollisionDetection_CollisionBatcher___0___" data-uid="BepuPhysics.CollisionDetection.MeshReduction.OnUntestedChildCompleted``1(BepuPhysics.CollisionDetection.PairContinuation@,BepuPhysics.CollisionDetection.CollisionBatcher{``0}@)">
   OnUntestedChildCompleted&lt;TCallbacks&gt;(ref PairContinuation, ref CollisionBatcher&lt;TCallbacks&gt;)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L46"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L53"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Handles what to do next when the child pair was rejected for testing, and no manifold exists.</p>
@@ -518,16 +578,16 @@ Struct MeshReduction  <a class="header-action link-secondary" title="View source
 
   <a id="BepuPhysics_CollisionDetection_MeshReduction_ReduceManifolds_" data-uid="BepuPhysics.CollisionDetection.MeshReduction.ReduceManifolds*"></a>
 
-  <h3 id="BepuPhysics_CollisionDetection_MeshReduction_ReduceManifolds_BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_Triangle___BepuUtilities_Memory_Buffer_BepuPhysics_CollisionDetection_NonconvexReductionChild___System_Int32_System_Int32_System_Boolean_BepuUtilities_BoundingBox__BepuUtilities_Matrix3x3__BepuUtilities_Matrix3x3__BepuPhysics_Collidables_Mesh__BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.CollisionDetection.MeshReduction.ReduceManifolds(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.Triangle}@,BepuUtilities.Memory.Buffer{BepuPhysics.CollisionDetection.NonconvexReductionChild}@,System.Int32,System.Int32,System.Boolean,BepuUtilities.BoundingBox@,BepuUtilities.Matrix3x3@,BepuUtilities.Matrix3x3@,BepuPhysics.Collidables.Mesh*,BepuUtilities.Memory.BufferPool)">
-  ReduceManifolds(ref Buffer&lt;Triangle&gt;, ref Buffer&lt;NonconvexReductionChild&gt;, int, int, bool, in BoundingBox, in Matrix3x3, in Matrix3x3, Mesh*, BufferPool)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L294"><i class="bi bi-code-slash"></i></a>
+  <h3 id="BepuPhysics_CollisionDetection_MeshReduction_ReduceManifolds_BepuUtilities_Memory_Buffer_BepuPhysics_Collidables_Triangle___BepuUtilities_Memory_Buffer_BepuPhysics_CollisionDetection_NonconvexReductionChild___System_Int32_System_Int32_System_Boolean_BepuUtilities_BoundingBox__BepuUtilities_Matrix3x3__BepuUtilities_Matrix3x3__System_Void____BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool_" data-uid="BepuPhysics.CollisionDetection.MeshReduction.ReduceManifolds(BepuUtilities.Memory.Buffer{BepuPhysics.Collidables.Triangle}@,BepuUtilities.Memory.Buffer{BepuPhysics.CollisionDetection.NonconvexReductionChild}@,System.Int32,System.Int32,System.Boolean,BepuUtilities.BoundingBox@,BepuUtilities.Matrix3x3@,BepuUtilities.Matrix3x3@,System.Void*,,,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool)">
+  ReduceManifolds(ref Buffer&lt;Triangle&gt;, ref Buffer&lt;NonconvexReductionChild&gt;, int, int, bool, in BoundingBox, in Matrix3x3, in Matrix3x3, void*, delegate*&lt;void*, Vector3, Vector3, BufferPool, Shapes, ref ChildEnumerator, void&gt;, delegate*&lt;void*, int, out Triangle, void&gt;, Shapes, BufferPool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L301"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"></div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static void ReduceManifolds(ref Buffer&lt;Triangle&gt; continuationTriangles, ref Buffer&lt;NonconvexReductionChild&gt; continuationChildren, int start, int count, bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation, Mesh* mesh, BufferPool pool)</code></pre>
+    <pre><code class="lang-csharp hljs">public static void ReduceManifolds(ref Buffer&lt;Triangle&gt; continuationTriangles, ref Buffer&lt;NonconvexReductionChild&gt; continuationChildren, int start, int count, bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation, void* mesh, delegate*&lt;void*, Vector3, Vector3, BufferPool, Shapes, ref MeshReduction.ChildEnumerator, void&gt; findLocalOverlapsThunk, delegate*&lt;void*, int, out Triangle, void&gt; getLocalChildThunk, Shapes shapes, BufferPool pool)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -548,7 +608,13 @@ Struct MeshReduction  <a class="header-action link-secondary" title="View source
     <dd></dd>
     <dt><code>meshInverseOrientation</code> <span class="xref">Matrix3x3</span></dt>
     <dd></dd>
-    <dt><code>mesh</code> <a class="xref" href="BepuPhysics.Collidables.Mesh.html">Mesh</a>*</dt>
+    <dt><code>mesh</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>*</dt>
+    <dd></dd>
+    <dt><code>findLocalOverlapsThunk</code> delegate*&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>*, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a>, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.numerics.vector3">Vector3</a>, <span class="xref">BufferPool</span>, <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a>, ref <a class="xref" href="BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.html">ChildEnumerator</a>, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>getLocalChildThunk</code> delegate*&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>*, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>, out <a class="xref" href="BepuPhysics.Collidables.Triangle.html">Triangle</a>, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.void">void</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>shapes</code> <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a></dt>
     <dd></dd>
     <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
     <dd></dd>
@@ -569,7 +635,7 @@ Struct MeshReduction  <a class="header-action link-secondary" title="View source
 
   <h3 id="BepuPhysics_CollisionDetection_MeshReduction_TryFlush__1_System_Int32_BepuPhysics_CollisionDetection_CollisionBatcher___0___" data-uid="BepuPhysics.CollisionDetection.MeshReduction.TryFlush``1(System.Int32,BepuPhysics.CollisionDetection.CollisionBatcher{``0}@)">
   TryFlush&lt;TCallbacks&gt;(int, ref CollisionBatcher&lt;TCallbacks&gt;)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L510"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L523"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Checks if the parent pair is complete and should be flushed.</p>

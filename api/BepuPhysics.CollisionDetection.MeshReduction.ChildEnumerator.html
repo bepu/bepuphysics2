@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Struct ConvexCompoundOverlapFinder&lt;TConvex, TConvexWide, TCompound&gt; | Bepu API </title>
+      <title>Struct MeshReduction.ChildEnumerator | Bepu API </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Struct ConvexCompoundOverlapFinder&lt;TConvex, TConvexWide, TCompound&gt; | Bepu API ">
+      <meta name="title" content="Struct MeshReduction.ChildEnumerator | Bepu API ">
       
       
       <link rel="icon" href="../favicon.ico">
@@ -16,7 +16,7 @@
       <meta name="docfx:rel" content="../">
       
       
-      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_CollisionDetection_CollisionTasks_ConvexCompoundOverlapFinder_3.md&amp;value=---%0Auid%3A%20BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundOverlapFinder%603%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="docfx:docurl" content="https://github.com/bepu/bepuphysics2/new/master/apiSpec/new?filename=BepuPhysics_CollisionDetection_MeshReduction_ChildEnumerator.md&amp;value=---%0Auid%3A%20BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
       <meta name="loc:inThisArticle" content="In this article">
       <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
       <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
@@ -84,16 +84,16 @@
           <nav id="breadcrumb"></nav>
         </div>
 
-        <article data-uid="BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundOverlapFinder`3">
+        <article data-uid="BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator">
 
 
 
-  <h1 id="BepuPhysics_CollisionDetection_CollisionTasks_ConvexCompoundOverlapFinder_3" data-uid="BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundOverlapFinder`3" class="text-break">
-Struct ConvexCompoundOverlapFinder&lt;TConvex, TConvexWide, TCompound&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/CollisionTasks/ConvexCompoundOverlapFinder.cs/#L42"><i class="bi bi-code-slash"></i></a>
+  <h1 id="BepuPhysics_CollisionDetection_MeshReduction_ChildEnumerator" data-uid="BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator" class="text-break">
+Struct MeshReduction.ChildEnumerator  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L290"><i class="bi bi-code-slash"></i></a>
   </h1>
 
   <div class="facts text-secondary">
-    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.CollisionDetection.html">CollisionDetection</a>.<a class="xref" href="BepuPhysics.CollisionDetection.CollisionTasks.html">CollisionTasks</a></dd></dl>
+    <dl><dt>Namespace</dt><dd><a class="xref" href="BepuPhysics.html">BepuPhysics</a>.<a class="xref" href="BepuPhysics.CollisionDetection.html">CollisionDetection</a></dd></dl>
   <dl><dt>Assembly</dt><dd>BepuPhysics.dll</dd></dl>
   </div>
 
@@ -101,26 +101,17 @@ Struct ConvexCompoundOverlapFinder&lt;TConvex, TConvexWide, TCompound&gt;  <a cl
   <div class="markdown conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public struct ConvexCompoundOverlapFinder&lt;TConvex, TConvexWide, TCompound&gt; : IConvexCompoundOverlapFinder where TConvex : struct, IConvexShape where TConvexWide : struct, IShapeWide&lt;TConvex&gt; where TCompound : struct, IBoundsQueryableCompound</code></pre>
+    <pre><code class="lang-csharp hljs">public struct MeshReduction.ChildEnumerator : IBreakableForEach&lt;int&gt;</code></pre>
   </div>
 
 
 
-  <h4 class="section">Type Parameters</h4>
-  <dl class="parameters">
-    <dt><code>TConvex</code></dt>
-    <dd></dd>
-    <dt><code>TConvexWide</code></dt>
-    <dd></dd>
-    <dt><code>TCompound</code></dt>
-    <dd></dd>
-  </dl>
 
 
   <dl class="typelist implements">
     <dt>Implements</dt>
     <dd>
-      <div><a class="xref" href="BepuPhysics.CollisionDetection.CollisionTasks.IConvexCompoundOverlapFinder.html">IConvexCompoundOverlapFinder</a></div>
+      <div><span class="xref">IBreakableForEach</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</div>
     </dd>
   </dl>
 
@@ -153,40 +144,102 @@ Struct ConvexCompoundOverlapFinder&lt;TConvex, TConvexWide, TCompound&gt;  <a cl
 
 
 
-  <h2 class="section" id="methods">Methods
+  <h2 class="section" id="fields">Fields
 </h2>
 
 
-  <a id="BepuPhysics_CollisionDetection_CollisionTasks_ConvexCompoundOverlapFinder_3_FindLocalOverlaps_" data-uid="BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundOverlapFinder`3.FindLocalOverlaps*"></a>
 
-  <h3 id="BepuPhysics_CollisionDetection_CollisionTasks_ConvexCompoundOverlapFinder_3_FindLocalOverlaps_BepuUtilities_Memory_Buffer_BepuPhysics_CollisionDetection_CollisionTasks_BoundsTestedPair___System_Int32_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes_System_Single_BepuPhysics_CollisionDetection_CollisionTasks_ConvexCompoundTaskOverlaps__" data-uid="BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundOverlapFinder`3.FindLocalOverlaps(BepuUtilities.Memory.Buffer{BepuPhysics.CollisionDetection.CollisionTasks.BoundsTestedPair}@,System.Int32,BepuUtilities.Memory.BufferPool,BepuPhysics.Collidables.Shapes,System.Single,BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundTaskOverlaps@)">
-  FindLocalOverlaps(ref Buffer&lt;BoundsTestedPair&gt;, int, BufferPool, Shapes, float, out ConvexCompoundTaskOverlaps)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/CollisionTasks/ConvexCompoundOverlapFinder.cs/#L47"><i class="bi bi-code-slash"></i></a>
+  <h3 id="BepuPhysics_CollisionDetection_MeshReduction_ChildEnumerator_List" data-uid="BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.List">
+  List
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L292"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"></div>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public void FindLocalOverlaps(ref Buffer&lt;BoundsTestedPair&gt; pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps)</code></pre>
+    <pre><code class="lang-csharp hljs">public QuickList&lt;int&gt; List</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">QuickList</span>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="BepuPhysics_CollisionDetection_MeshReduction_ChildEnumerator_Pool" data-uid="BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.Pool">
+  Pool
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L293"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public BufferPool Pool</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">BufferPool</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="BepuPhysics_CollisionDetection_MeshReduction_ChildEnumerator_LoopBody_" data-uid="BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.LoopBody*"></a>
+
+  <h3 id="BepuPhysics_CollisionDetection_MeshReduction_ChildEnumerator_LoopBody_System_Int32_" data-uid="BepuPhysics.CollisionDetection.MeshReduction.ChildEnumerator.LoopBody(System.Int32)">
+  LoopBody(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L294"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Executes one execution of the loop body.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool LoopBody(int i)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
-    <dt><code>pairs</code> <span class="xref">Buffer</span>&lt;<a class="xref" href="BepuPhysics.CollisionDetection.CollisionTasks.BoundsTestedPair.html">BoundsTestedPair</a>&gt;</dt>
-    <dd></dd>
-    <dt><code>pairCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
-    <dd></dd>
-    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
-    <dd></dd>
-    <dt><code>shapes</code> <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a></dt>
-    <dd></dd>
-    <dt><code>dt</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
-    <dd></dd>
-    <dt><code>overlaps</code> <a class="xref" href="BepuPhysics.CollisionDetection.CollisionTasks.ConvexCompoundTaskOverlaps.html">ConvexCompoundTaskOverlaps</a></dt>
-    <dd></dd>
+    <dt><code>i</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Visited element.</p>
+</dd>
   </dl>
 
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the loop should continue, false otherwise.</p>
+</dd>
+  </dl>
 
 
 
@@ -202,7 +255,7 @@ Struct ConvexCompoundOverlapFinder&lt;TConvex, TConvexWide, TCompound&gt;  <a cl
 </article>
 
         <div class="contribution d-print-none">
-          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/CollisionTasks/ConvexCompoundOverlapFinder.cs/#L42" class="edit-link">Edit this page</a>
+          <a href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/CollisionDetection/MeshReduction.cs/#L290" class="edit-link">Edit this page</a>
         </div>
 
 

@@ -129,6 +129,9 @@ Interface ICompoundShape  <a class="header-action link-secondary" title="View so
     <div>
       <a class="xref" href="BepuPhysics.CollisionDetection.CollisionTasks.IBoundsQueryableCompound.html#BepuPhysics_CollisionDetection_CollisionTasks_IBoundsQueryableCompound_FindLocalOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_System_Numerics_Vector3_System_Single_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes_System_Void__">IBoundsQueryableCompound.FindLocalOverlaps&lt;TOverlaps&gt;(Vector3, Vector3, Vector3, float, BufferPool, Shapes, void*)</a>
     </div>
+    <div>
+      <a class="xref" href="BepuPhysics.CollisionDetection.CollisionTasks.IBoundsQueryableCompound.html#BepuPhysics_CollisionDetection_CollisionTasks_IBoundsQueryableCompound_FindLocalOverlaps__1_System_Numerics_Vector3_System_Numerics_Vector3_BepuUtilities_Memory_BufferPool_BepuPhysics_Collidables_Shapes___0__">IBoundsQueryableCompound.FindLocalOverlaps&lt;TEnumerator&gt;(Vector3, Vector3, BufferPool, Shapes, ref TEnumerator)</a>
+    </div>
   </dd></dl>
 
 
@@ -144,7 +147,7 @@ Interface ICompoundShape  <a class="header-action link-secondary" title="View so
 
   <h3 id="BepuPhysics_Collidables_ICompoundShape_ChildCount" data-uid="BepuPhysics.Collidables.ICompoundShape.ChildCount">
   ChildCount
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/IShape.cs/#L131"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/IShape.cs/#L130"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Gets the number of children in the compound shape.</p>
@@ -267,7 +270,7 @@ Interface ICompoundShape  <a class="header-action link-secondary" title="View so
 
   <h3 id="BepuPhysics_Collidables_ICompoundShape_GetChild_System_Int32_" data-uid="BepuPhysics.Collidables.ICompoundShape.GetChild(System.Int32)">
   GetChild(int)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/IShape.cs/#L137"><i class="bi bi-code-slash"></i></a>
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/IShape.cs/#L136"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Gets a child from the compound by index.</p>
@@ -304,9 +307,9 @@ Interface ICompoundShape  <a class="header-action link-secondary" title="View so
 
   <a id="BepuPhysics_Collidables_ICompoundShape_RayTest_" data-uid="BepuPhysics.Collidables.ICompoundShape.RayTest*"></a>
 
-  <h3 id="BepuPhysics_Collidables_ICompoundShape_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuPhysics_Collidables_Shapes___0__" data-uid="BepuPhysics.Collidables.ICompoundShape.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,``0@)">
-  RayTest&lt;TRayHitHandler&gt;(in RigidPose, in RayData, ref float, Shapes, ref TRayHitHandler)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/IShape.cs/#L118"><i class="bi bi-code-slash"></i></a>
+  <h3 id="BepuPhysics_Collidables_ICompoundShape_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RayData__System_Single__BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool___0__" data-uid="BepuPhysics.Collidables.ICompoundShape.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RayData@,System.Single@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)">
+  RayTest&lt;TRayHitHandler&gt;(in RigidPose, in RayData, ref float, Shapes, BufferPool, ref TRayHitHandler)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/IShape.cs/#L116"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Tests a ray against the shape.</p>
@@ -314,7 +317,7 @@ Interface ICompoundShape  <a class="header-action link-secondary" title="View so
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">void RayTest&lt;TRayHitHandler&gt;(in RigidPose pose, in RayData ray, ref float maximumT, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
+    <pre><code class="lang-csharp hljs">void RayTest&lt;TRayHitHandler&gt;(in RigidPose pose, in RayData ray, ref float maximumT, Shapes shapeBatches, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -330,6 +333,9 @@ Interface ICompoundShape  <a class="header-action link-secondary" title="View so
 </dd>
     <dt><code>shapeBatches</code> <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a></dt>
     <dd><p>Shape batches to look up child shapes in if necessary.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Buffer pool used for any temporary allocations required by the test.</p>
 </dd>
     <dt><code>hitHandler</code> <span class="xref">TRayHitHandler</span></dt>
     <dd><p>Callbacks called when the ray interacts with a test candidate.</p>
@@ -354,9 +360,9 @@ Interface ICompoundShape  <a class="header-action link-secondary" title="View so
 
   <a id="BepuPhysics_Collidables_ICompoundShape_RayTest_" data-uid="BepuPhysics.Collidables.ICompoundShape.RayTest*"></a>
 
-  <h3 id="BepuPhysics_Collidables_ICompoundShape_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuPhysics_Collidables_Shapes___0__" data-uid="BepuPhysics.Collidables.ICompoundShape.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,``0@)">
-  RayTest&lt;TRayHitHandler&gt;(in RigidPose, ref RaySource, Shapes, ref TRayHitHandler)
-  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/IShape.cs/#L127"><i class="bi bi-code-slash"></i></a>
+  <h3 id="BepuPhysics_Collidables_ICompoundShape_RayTest__1_BepuPhysics_RigidPose__BepuPhysics_Trees_RaySource__BepuPhysics_Collidables_Shapes_BepuUtilities_Memory_BufferPool___0__" data-uid="BepuPhysics.Collidables.ICompoundShape.RayTest``1(BepuPhysics.RigidPose@,BepuPhysics.Trees.RaySource@,BepuPhysics.Collidables.Shapes,BepuUtilities.Memory.BufferPool,``0@)">
+  RayTest&lt;TRayHitHandler&gt;(in RigidPose, ref RaySource, Shapes, BufferPool, ref TRayHitHandler)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/bepu/bepuphysics2/blob/master/BepuPhysics/Collidables/IShape.cs/#L126"><i class="bi bi-code-slash"></i></a>
   </h3>
 
   <div class="markdown level1 summary"><p>Tests multiple rays against the shape.</p>
@@ -364,7 +370,7 @@ Interface ICompoundShape  <a class="header-action link-secondary" title="View so
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">void RayTest&lt;TRayHitHandler&gt;(in RigidPose pose, ref RaySource rays, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
+    <pre><code class="lang-csharp hljs">void RayTest&lt;TRayHitHandler&gt;(in RigidPose pose, ref RaySource rays, Shapes shapeBatches, BufferPool pool, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -377,6 +383,9 @@ Interface ICompoundShape  <a class="header-action link-secondary" title="View so
 </dd>
     <dt><code>shapeBatches</code> <a class="xref" href="BepuPhysics.Collidables.Shapes.html">Shapes</a></dt>
     <dd><p>Shape batches to look up child shapes in if necessary.</p>
+</dd>
+    <dt><code>pool</code> <span class="xref">BufferPool</span></dt>
+    <dd><p>Buffer pool used for any temporary allocations required by the test.</p>
 </dd>
     <dt><code>hitHandler</code> <span class="xref">TRayHitHandler</span></dt>
     <dd><p>Callbacks called when the ray interacts with a test candidate.</p>
