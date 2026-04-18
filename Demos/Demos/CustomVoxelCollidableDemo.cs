@@ -108,7 +108,6 @@ struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
         public Matrix3x3 Orientation;
         public RayData OriginalRay;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void TestLeaf(int leafIndex, RayData* ray, float* maximumT, BufferPool pool)
         {
             ref var voxelIndex = ref VoxelIndices[leafIndex];
@@ -179,7 +178,6 @@ struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
         hitHandler = leafTester.HitHandler;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void GetLocalChild(int childIndex, out Box childShape)
     {
         var halfSize = VoxelSize * 0.5f;
@@ -188,14 +186,12 @@ struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
         childShape.HalfLength = halfSize.Z;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void GetPosedLocalChild(int childIndex, out Box childShape, out RigidPose childPose)
     {
         GetLocalChild(childIndex, out childShape);
         childPose = (VoxelIndices[childIndex] + new Vector3(0.5f) * VoxelSize);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void GetLocalChild(int childIndex, ref BoxWide shapeWide)
     {
         //This function provides a reference to a lane in an AOSOA structure.
@@ -207,7 +203,6 @@ struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
     }
 
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
          where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
          where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
@@ -228,7 +223,6 @@ struct Voxels : IHomogeneousCompoundShape<Box, BoxWide>
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly void FindLocalOverlaps<TEnumerator>(Vector3 min, Vector3 max, BufferPool pool, Shapes shapes, ref TEnumerator enumerator)
         where TEnumerator : IBreakableForEach<int>
     {
@@ -264,7 +258,6 @@ public struct ConvexVoxelsContinuations : IConvexCompoundContinuationHandler<Non
 {
     public CollisionContinuationType CollisionContinuationType => CollisionContinuationType.NonconvexReduction;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ref NonconvexReduction CreateContinuation<TCallbacks>(
         ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, in BoundsTestedPair pair, in OverlapQueryForPair pairQuery, out int continuationIndex)
         where TCallbacks : struct, ICollisionCallbacks
@@ -272,7 +265,6 @@ public struct ConvexVoxelsContinuations : IConvexCompoundContinuationHandler<Non
         return ref collisionBatcher.NonconvexReductions.CreateContinuation(childCount, collisionBatcher.Pool, out continuationIndex);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static unsafe void GetChildData<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, ref NonconvexReductionChild continuationChild,
         in BoundsTestedPair pair, int shapeTypeA, int childIndexB, out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
         where TCallbacks : struct, ICollisionCallbacks
@@ -295,7 +287,6 @@ public struct ConvexVoxelsContinuations : IConvexCompoundContinuationHandler<Non
         collisionBatcher.CacheShapeB(shapeTypeA, childTypeB, Unsafe.AsPointer(ref halfSize), 12, out childShapeDataB);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe void ConfigureContinuationChild<TCallbacks>(
         ref CollisionBatcher<TCallbacks> collisionBatcher, ref NonconvexReduction continuation, int continuationChildIndex, in BoundsTestedPair pair, int shapeTypeA, int childIndexB,
         out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
@@ -327,7 +318,6 @@ public unsafe struct CompoundVoxelsContinuations<TCompoundA> : ICompoundPairCont
 {
     public CollisionContinuationType CollisionContinuationType => CollisionContinuationType.NonconvexReduction;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ref NonconvexReduction CreateContinuation<TCallbacks>(
         ref CollisionBatcher<TCallbacks> collisionBatcher, int totalChildCount, ref Buffer<ChildOverlapsCollection> pairOverlaps, ref Buffer<OverlapQueryForPair> pairQueries, in BoundsTestedPair pair, out int continuationIndex)
         where TCallbacks : struct, ICollisionCallbacks
@@ -335,7 +325,6 @@ public unsafe struct CompoundVoxelsContinuations<TCompoundA> : ICompoundPairCont
         return ref collisionBatcher.NonconvexReductions.CreateContinuation(totalChildCount, collisionBatcher.Pool, out continuationIndex);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void GetChildAData<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, ref NonconvexReduction continuation, in BoundsTestedPair pair, int childIndexA,
         out RigidPose childPoseA, out int childTypeA, out void* childShapeDataA)
         where TCallbacks : struct, ICollisionCallbacks
@@ -347,7 +336,6 @@ public unsafe struct CompoundVoxelsContinuations<TCompoundA> : ICompoundPairCont
         collisionBatcher.Shapes[childTypeA].GetShapeData(compoundChildA.ShapeIndex.Index, out childShapeDataA, out _);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void ConfigureContinuationChild<TCallbacks>(
         ref CollisionBatcher<TCallbacks> collisionBatcher, ref NonconvexReduction continuation, int continuationChildIndex, in BoundsTestedPair pair, int childIndexA, int childTypeA, int childIndexB, in RigidPose childPoseA,
         out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
