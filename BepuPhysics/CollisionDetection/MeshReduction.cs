@@ -32,7 +32,7 @@ namespace BepuPhysics.CollisionDetection
         //Type-erased pointer to the mesh shape data, plus two function pointers that close over the concrete mesh type.
         //ConvexMeshContinuations<TMesh> populates these from MeshReductionThunks<TMesh> at continuation creation time.
         //The thunks are static methods of a generic helper, so they're JIT-specialized per TMesh and any interface
-        //call inside them is devirtualized. This keeps the >=128 path's per-contact calls cheap without requiring
+        //call inside them is devirtualized. This keeps the 'way too many subpairs' path's per-contact calls cheap without requiring
         //CollisionBatcher to know about TMesh.
         public void* Mesh;
         public delegate*<void*, Vector3, Vector3, BufferPool, Shapes, ref ChildEnumerator, void> FindLocalOverlapsThunk;
