@@ -11,7 +11,7 @@ namespace BepuPhysics.Trees
         unsafe readonly void GetOverlaps<TEnumerator>(int nodeIndex, BoundingBox boundingBox, Buffer<int> stack, BufferPool pool, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {
             Debug.Assert((nodeIndex >= 0 && nodeIndex < NodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < LeafCount));
-            Debug.Assert(LeafCount >= 2, "This implementation assumes all nodes are filled.");
+            Debug.Assert(LeafCount >= 2 || nodeIndex < 0, "The node traversal assumes all nodes are filled; a single-leaf tree can only be entered through its encoded leaf index.");
 
             int stackEnd = 0;
             while (true)
