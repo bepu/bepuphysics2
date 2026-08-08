@@ -301,7 +301,64 @@ namespace BepuPhysics.Collidables
 
         }
 
-        static void ReduceFace(ref QuickList<int> faceVertexIndices, Vector3 faceNormal, Span<Vector3> points, float planeEpsilon, ref QuickList<Vector2> facePoints, ref Buffer<int> allowVertex, ref QuickList<int> reducedIndices)
+        // Minimal bitset that lives on the stack
+        // Resizes with bufferPool for massive index values
+        private unsafe ref struct StackBitSet(ulong* stackMemory, BufferPool pool) : IDisposable
+        {
+            public const int StackArrayCapacity = 64;
+
+            private Buffer<ulong> items = new(stackMemory, StackArrayCapacity);
+
+            public bool this[int index]
+            {
+                get
+                {
+                    var arrayIndex = index >> 6;
+                    if (arrayIndex >= items.Length)
+                        return false;
+                    return (items[arrayIndex] & (1UL << (index & 0x3F))) != 0;
+                }
+            }
+
+            public void Set(int index)
+            {
+                if (index < 0)
+                    throw new Exception();
+                var arrayIndex = index >> 6;
+                if (arrayIndex >= items.Length)
+                {
+                    Grow(arrayIndex);
+                }
+                items[arrayIndex] |= (1UL << (index & 0x3F));
+            }
+
+            public void Clear()
+            {
+                items.Clear(0, items.Length);
+            }
+
+            void Grow(int requested)
+            {
+                if (items.Length == StackArrayCapacity)
+                {
+                    pool.Take(Math.Max(items.Length * 2, requested + 1), out Buffer<ulong> newSpace);
+                    items.CopyTo(0, newSpace, 0, items.Length);
+                    items = newSpace;
+                }
+                else
+                {
+                    pool.Resize(ref items, Math.Max(items.Length * 2, requested + 1), items.Length);
+                }
+            }
+
+            public void Dispose()
+            {
+                if(items.Length > StackArrayCapacity)
+                    pool.Return(ref items);
+            }
+        }
+
+        static unsafe void ReduceFace(ref QuickList<int> faceVertexIndices, Vector3 faceNormal, Span<Vector3> points, float planeEpsilon, ref QuickList<Vector2> facePoints, ref Buffer<int> allowVertex, ref QuickList<int> reducedIndices, BufferPool pool)
         {
             Debug.Assert(facePoints.Count == 0 && reducedIndices.Count == 0 && facePoints.Span.Length >= faceVertexIndices.Count && reducedIndices.Span.Length >= faceVertexIndices.Count);
             for (int i = faceVertexIndices.Count - 1; i >= 0; --i)
@@ -397,11 +454,18 @@ namespace BepuPhysics.Collidables
             reducedIndices.AllocateUnsafely() = faceVertexIndices[initialIndex];
 
             var previousEndIndex = initialIndex;
+
+            ulong* stack = stackalloc ulong[StackBitSet.StackArrayCapacity];
+            using StackBitSet reducedIndicesSet = new(stack, pool);
+            reducedIndicesSet.Clear(); // Initialize to zero (needed with stackalloc here)
+            for (int i = 0; i < reducedIndices.Count; i++)
+                reducedIndicesSet.Set(reducedIndices[i]);
+
             for (int i = 0; i < facePoints.Count; ++i)
             {
                 var nextIndex = FindNextIndexForFaceHull(facePoints[previousEndIndex], previousEdgeDirection, planeEpsilon, ref facePoints);
                 //This can return -1 in the event of a completely degenerate face.
-                if (nextIndex == -1 || reducedIndices.Contains(faceVertexIndices[nextIndex]))
+                if (nextIndex == -1 || reducedIndicesSet[faceVertexIndices[nextIndex]])
                 {
                     if (nextIndex >= 0)
                     {
@@ -416,20 +480,25 @@ namespace BepuPhysics.Collidables
                             //Note that order matters; can't do a last element swapping remove.
                             reducedIndices.Span.CopyTo(cycleStartIndex, reducedIndices.Span, 0, reducedIndices.Count - cycleStartIndex);
                             reducedIndices.Count -= cycleStartIndex;
+                            reducedIndicesSet.Clear();
+                            for (int j = 0; j < reducedIndices.Count; j++)
+                                reducedIndicesSet.Set(reducedIndices[j]);
                         }
                     }
                     break;
                 }
                 reducedIndices.AllocateUnsafely() = faceVertexIndices[nextIndex];
+                reducedIndicesSet.Set(faceVertexIndices[nextIndex]);
                 previousEdgeDirection = Vector2.Normalize(facePoints[nextIndex] - facePoints[previousEndIndex]);
                 previousEndIndex = nextIndex;
             }
+
 
             //Ignore any vertices which were not on the outer boundary of the face.
             for (int i = 0; i < faceVertexIndices.Count; ++i)
             {
                 var index = faceVertexIndices[i];
-                if (!reducedIndices.Contains(index))
+                if (!reducedIndicesSet[index])
                 {
                     allowVertex[index] = 0;
                 }
@@ -660,7 +729,7 @@ namespace BepuPhysics.Collidables
             }
             centroid /= points.Length;
             //Fill in the last few slots with the centroid.
-            //We avoid doing a bunch of special case work on the last partial bundle by just assuming it has a few extra redundant internal points. 
+            //We avoid doing a bunch of special case work on the last partial bundle by just assuming it has a few extra redundant internal points.
             var bundleSlots = pointBundles.Length * Vector<float>.Count;
             for (int i = points.Length; i < bundleSlots; ++i)
             {
@@ -740,7 +809,8 @@ namespace BepuPhysics.Collidables
             var reducedFaceIndices = new QuickList<int>(points.Length, pool);
 
 
-            ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, points, planeSlabEpsilonNarrow, ref facePoints, ref allowVertices, ref reducedFaceIndices);
+            ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, points, planeSlabEpsilonNarrow, ref facePoints,
+                ref allowVertices, ref reducedFaceIndices, pool);
 
             var faces = new QuickList<EarlyFace>(points.Length, pool);
             var edgesToTest = new QuickList<EdgeToTest>(points.Length, pool);
@@ -806,7 +876,8 @@ namespace BepuPhysics.Collidables
                 FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, edgeToTest.Endpoints, ref pointBundles, indexOffsetBundle, allowVertices, points.Length, ref projectedOnX, ref projectedOnY, planeSlabEpsilon, ref rawFaceVertexIndices, out var faceNormal);
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
-                ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeSlabEpsilonNarrow, ref facePoints, ref allowVertices, ref reducedFaceIndices);
+                ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeSlabEpsilonNarrow, ref facePoints,
+                    ref allowVertices, ref reducedFaceIndices, pool);
 
                 if (reducedFaceIndices.Count < 3)
                 {
@@ -852,7 +923,8 @@ namespace BepuPhysics.Collidables
                         face.VertexIndices.Count = 0;
                         facePoints.Count = 0;
                         face.VertexIndices.EnsureCapacity(rawFaceVertexIndices.Count, pool);
-                        ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeSlabEpsilonNarrow, ref facePoints, ref allowVertices, ref face.VertexIndices);
+                        ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeSlabEpsilonNarrow, ref facePoints,
+                            ref allowVertices, ref face.VertexIndices, pool);
 #if DEBUG_STEPS
                         step.UpdateForFaceMerge(rawFaceVertexIndices, face.VertexIndices, allowVertices, i);
 #endif
