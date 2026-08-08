@@ -93,7 +93,7 @@ public class TankDemo : Demo
             SuspensionSettings = new SpringSettings(2.5f, 1.5f),
             WheelShape = wheelShapeIndex,
             WheelInertia = wheelInertia,
-            WheelFriction = 2f,
+            WheelFriction = 1f,
             TreadSpacing = 1f,
             WheelCountPerTread = 5,
             WheelOrientation = QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * -0.5f),

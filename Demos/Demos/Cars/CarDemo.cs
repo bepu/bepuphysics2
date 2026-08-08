@@ -62,7 +62,7 @@ public class CarDemo : Demo
         const float wheelBaseWidth = x * 2;
         const float wheelBaseLength = frontZ - backZ;
 
-        playerController = new SimpleCarController(SimpleCar.Create(Simulation, properties, new Vector3(0, 10, 0), bodyShapeIndex, bodyInertia, 0.5f, wheelShapeIndex, wheelInertia, 2f,
+        playerController = new SimpleCarController(SimpleCar.Create(Simulation, properties, new Vector3(0, 10, 0), bodyShapeIndex, bodyInertia, 0.35f, wheelShapeIndex, wheelInertia, 1f,
             new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), 0.25f,
             new SpringSettings(5f, 0.7f), QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
             forwardSpeed: 75, forwardForce: 6, zoomMultiplier: 2, backwardSpeed: 30, backwardForce: 4, idleForce: 0.25f, brakeForce: 7, steeringSpeed: 1.5f, maximumSteeringAngle: MathF.PI * 0.23f,

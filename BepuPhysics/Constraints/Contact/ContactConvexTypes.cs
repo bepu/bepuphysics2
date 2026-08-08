@@ -472,11 +472,10 @@ namespace BepuPhysics.Constraints.Contact
             PenetrationLimitOneBody.Solve(inertiaA, prestep.Normal, prestep.Contact0.OffsetA, prestep.Contact0.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
             PenetrationLimitOneBody.Solve(inertiaA, prestep.Normal, prestep.Contact1.OffsetA, prestep.Contact1.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA);
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
-            var premultipliedFrictionCoefficient = new Vector<float>(1f / 2f) * prestep.MaterialProperties.FrictionCoefficient;
-            var maximumTangentImpulse = premultipliedFrictionCoefficient * (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
+            var maximumTangentImpulse = prestep.MaterialProperties.FrictionCoefficient * (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, out var offsetToManifoldCenterA);
             TangentFrictionOneBody.Solve(x, z, offsetToManifoldCenterA, inertiaA, maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
-            var maximumTwistImpulse = premultipliedFrictionCoefficient * (
+            var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * (
                 accumulatedImpulses.Penetration0 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact0.OffsetA) +
                 accumulatedImpulses.Penetration1 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact1.OffsetA));
             TwistFrictionOneBody.Solve(prestep.Normal, inertiaA, maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
@@ -636,11 +635,10 @@ namespace BepuPhysics.Constraints.Contact
             PenetrationLimitOneBody.Solve(inertiaA, prestep.Normal, prestep.Contact1.OffsetA, prestep.Contact1.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA);
             PenetrationLimitOneBody.Solve(inertiaA, prestep.Normal, prestep.Contact2.OffsetA, prestep.Contact2.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA);
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
-            var premultipliedFrictionCoefficient = new Vector<float>(1f / 3f) * prestep.MaterialProperties.FrictionCoefficient;
-            var maximumTangentImpulse = premultipliedFrictionCoefficient * (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
+            var maximumTangentImpulse = prestep.MaterialProperties.FrictionCoefficient * (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, out var offsetToManifoldCenterA);
             TangentFrictionOneBody.Solve(x, z, offsetToManifoldCenterA, inertiaA, maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
-            var maximumTwistImpulse = premultipliedFrictionCoefficient * (
+            var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * (
                 accumulatedImpulses.Penetration0 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact0.OffsetA) +
                 accumulatedImpulses.Penetration1 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact1.OffsetA) +
                 accumulatedImpulses.Penetration2 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact2.OffsetA));
@@ -810,11 +808,10 @@ namespace BepuPhysics.Constraints.Contact
             PenetrationLimitOneBody.Solve(inertiaA, prestep.Normal, prestep.Contact2.OffsetA, prestep.Contact2.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA);
             PenetrationLimitOneBody.Solve(inertiaA, prestep.Normal, prestep.Contact3.OffsetA, prestep.Contact3.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration3, ref wsvA);
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
-            var premultipliedFrictionCoefficient = new Vector<float>(1f / 4f) * prestep.MaterialProperties.FrictionCoefficient;
-            var maximumTangentImpulse = premultipliedFrictionCoefficient * (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
+            var maximumTangentImpulse = prestep.MaterialProperties.FrictionCoefficient * (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact3.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, prestep.Contact3.Depth, out var offsetToManifoldCenterA);
             TangentFrictionOneBody.Solve(x, z, offsetToManifoldCenterA, inertiaA, maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
-            var maximumTwistImpulse = premultipliedFrictionCoefficient * (
+            var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * (
                 accumulatedImpulses.Penetration0 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact0.OffsetA) +
                 accumulatedImpulses.Penetration1 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact1.OffsetA) +
                 accumulatedImpulses.Penetration2 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact2.OffsetA) +
@@ -1135,12 +1132,11 @@ namespace BepuPhysics.Constraints.Contact
             PenetrationLimit.Solve(inertiaA, inertiaB, prestep.Normal, prestep.Contact0.OffsetA, prestep.Contact0.OffsetA - prestep.OffsetB, prestep.Contact0.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
             PenetrationLimit.Solve(inertiaA, inertiaB, prestep.Normal, prestep.Contact1.OffsetA, prestep.Contact1.OffsetA - prestep.OffsetB, prestep.Contact1.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
-            var premultipliedFrictionCoefficient = new Vector<float>(1f / 2f) * prestep.MaterialProperties.FrictionCoefficient;
-            var maximumTangentImpulse = premultipliedFrictionCoefficient * (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
+            var maximumTangentImpulse = prestep.MaterialProperties.FrictionCoefficient * (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, out var offsetToManifoldCenterA);
             Vector3Wide.Subtract(offsetToManifoldCenterA, prestep.OffsetB, out var offsetToManifoldCenterB);
             TangentFriction.Solve(x, z, offsetToManifoldCenterA, offsetToManifoldCenterB, inertiaA, inertiaB, maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
-            var maximumTwistImpulse = premultipliedFrictionCoefficient * (
+            var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * (
                 accumulatedImpulses.Penetration0 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact0.OffsetA) +
                 accumulatedImpulses.Penetration1 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact1.OffsetA));
             TwistFriction.Solve(prestep.Normal, inertiaA, inertiaB, maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
@@ -1312,12 +1308,11 @@ namespace BepuPhysics.Constraints.Contact
             PenetrationLimit.Solve(inertiaA, inertiaB, prestep.Normal, prestep.Contact1.OffsetA, prestep.Contact1.OffsetA - prestep.OffsetB, prestep.Contact1.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
             PenetrationLimit.Solve(inertiaA, inertiaB, prestep.Normal, prestep.Contact2.OffsetA, prestep.Contact2.OffsetA - prestep.OffsetB, prestep.Contact2.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA, ref wsvB);
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
-            var premultipliedFrictionCoefficient = new Vector<float>(1f / 3f) * prestep.MaterialProperties.FrictionCoefficient;
-            var maximumTangentImpulse = premultipliedFrictionCoefficient * (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
+            var maximumTangentImpulse = prestep.MaterialProperties.FrictionCoefficient * (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, out var offsetToManifoldCenterA);
             Vector3Wide.Subtract(offsetToManifoldCenterA, prestep.OffsetB, out var offsetToManifoldCenterB);
             TangentFriction.Solve(x, z, offsetToManifoldCenterA, offsetToManifoldCenterB, inertiaA, inertiaB, maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
-            var maximumTwistImpulse = premultipliedFrictionCoefficient * (
+            var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * (
                 accumulatedImpulses.Penetration0 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact0.OffsetA) +
                 accumulatedImpulses.Penetration1 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact1.OffsetA) +
                 accumulatedImpulses.Penetration2 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact2.OffsetA));
@@ -1499,12 +1494,11 @@ namespace BepuPhysics.Constraints.Contact
             PenetrationLimit.Solve(inertiaA, inertiaB, prestep.Normal, prestep.Contact2.OffsetA, prestep.Contact2.OffsetA - prestep.OffsetB, prestep.Contact2.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA, ref wsvB);
             PenetrationLimit.Solve(inertiaA, inertiaB, prestep.Normal, prestep.Contact3.OffsetA, prestep.Contact3.OffsetA - prestep.OffsetB, prestep.Contact3.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration3, ref wsvA, ref wsvB);
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
-            var premultipliedFrictionCoefficient = new Vector<float>(1f / 4f) * prestep.MaterialProperties.FrictionCoefficient;
-            var maximumTangentImpulse = premultipliedFrictionCoefficient * (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
+            var maximumTangentImpulse = prestep.MaterialProperties.FrictionCoefficient * (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
             FrictionHelpers.ComputeFrictionCenter(prestep.Contact0.OffsetA, prestep.Contact1.OffsetA, prestep.Contact2.OffsetA, prestep.Contact3.OffsetA, prestep.Contact0.Depth, prestep.Contact1.Depth, prestep.Contact2.Depth, prestep.Contact3.Depth, out var offsetToManifoldCenterA);
             Vector3Wide.Subtract(offsetToManifoldCenterA, prestep.OffsetB, out var offsetToManifoldCenterB);
             TangentFriction.Solve(x, z, offsetToManifoldCenterA, offsetToManifoldCenterB, inertiaA, inertiaB, maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
-            var maximumTwistImpulse = premultipliedFrictionCoefficient * (
+            var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * (
                 accumulatedImpulses.Penetration0 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact0.OffsetA) +
                 accumulatedImpulses.Penetration1 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact1.OffsetA) +
                 accumulatedImpulses.Penetration2 * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact2.OffsetA) +

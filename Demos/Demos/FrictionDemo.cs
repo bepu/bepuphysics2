@@ -95,7 +95,7 @@ public class FrictionDemo : Demo
         var boxDescription = BodyDescription.CreateDynamic(RigidPose.Identity, new Vector3(20, 0, 0), shape.ComputeInertia(1), Simulation.Shapes.Add(shape), 1e-2f);
 
         int boxCount = 100;
-        float maximumFriction = 3;
+        float maximumFriction = 0.75f;
         for (int i = 0; i < 100; ++i)
         {
             //Drop the boxes in a line with varying friction.

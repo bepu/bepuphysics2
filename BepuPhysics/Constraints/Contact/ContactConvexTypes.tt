@@ -261,10 +261,7 @@ for (int i = 0; i < contactCount; ++i)
             PenetrationLimit<#=suffix#>.Solve(inertiaA<#=bodyCount == 2 ? ", inertiaB" : ""#>, prestep.Normal, prestep.Contact<#=i#>.OffsetA, <#if(bodyCount == 2) {#>prestep.Contact<#=i#>.OffsetA - prestep.OffsetB, <#}#>prestep.Contact<#=i#>.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration<#=i#>, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
 <#}#>
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
-<#if (contactCount > 1) {#>
-            var premultipliedFrictionCoefficient = new Vector<float>(1f / <#=contactCount#>f) * prestep.MaterialProperties.FrictionCoefficient;
-<#}#>
-            var maximumTangentImpulse = <#=contactCount > 1 ? "premultipliedFrictionCoefficient" : "prestep.MaterialProperties.FrictionCoefficient"#> * (<#for (int i = 0; i < contactCount; ++i) {#>accumulatedImpulses.Penetration<#=i#><#if(i < contactCount - 1){#> + <#}}#>);
+            var maximumTangentImpulse = prestep.MaterialProperties.FrictionCoefficient * (<#for (int i = 0; i < contactCount; ++i) {#>accumulatedImpulses.Penetration<#=i#><#if(i < contactCount - 1){#> + <#}}#>);
 <#if (contactCount > 1) {#>
             FrictionHelpers.ComputeFrictionCenter(<#for (int i = 0; i < contactCount; ++i) {#>prestep.Contact<#=i#>.OffsetA, <#}#><#for (int i = 0; i < contactCount; ++i) {#>prestep.Contact<#=i#>.Depth, <#}#>out var offsetToManifoldCenterA);
 <#if (bodyCount == 2) {#>
@@ -277,9 +274,9 @@ for (int i = 0; i < contactCount; ++i)
 <#if (contactCount == 1) {#>
             //If there's only one contact, then the contact patch as determined by contact distance would be zero.
             //That can cause some subtle behavioral issues sometimes, so we approximate lever arm with the contact depth, assuming that the contact surface area will increase as the depth increases.
-            var maximumTwistImpulse = <#=contactCount > 1 ? "premultipliedFrictionCoefficient" : "prestep.MaterialProperties.FrictionCoefficient"#> * accumulatedImpulses.Penetration0 * Vector.Max(Vector<float>.Zero, prestep.Contact0.Depth);
+            var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * accumulatedImpulses.Penetration0 * Vector.Max(Vector<float>.Zero, prestep.Contact0.Depth);
 <#} else {#>
-            var maximumTwistImpulse = <#=contactCount > 1 ? "premultipliedFrictionCoefficient" : "prestep.MaterialProperties.FrictionCoefficient"#> * (
+            var maximumTwistImpulse = prestep.MaterialProperties.FrictionCoefficient * (
 <#for (int i = 0; i < contactCount; ++i) {#>
                 accumulatedImpulses.Penetration<#=i#> * Vector3Wide.Distance(offsetToManifoldCenterA, prestep.Contact<#=i#>.OffsetA)<#=i == contactCount - 1 ? ");" : " +"#>
 <#}#>
