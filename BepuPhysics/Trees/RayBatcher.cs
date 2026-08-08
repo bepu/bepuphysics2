@@ -515,10 +515,24 @@ namespace BepuPhysics.Trees
                 else
                 {
                     //Not enough rays remain to justify group tests. Fall back to a per-ray traversal.
-                    for (int i = 0; i < entry.RayCount; ++i)
+                    if (tree.LeafCount == 1)
                     {
-                        var rayIndex = rayStackStart[i];
-                        tree.RayCast(entry.NodeIndex, batchRays.Memory + rayIndex, batchOriginalRays.Memory + rayIndex, fallbackStack, pool, ref leafTester);
+                        for (int i = 0; i < entry.RayCount; ++i)
+                        {
+                            var rayIndex = rayStackStart[i];
+                            if (Tree.Intersects(tree.Nodes[0].A.Min, tree.Nodes[0].A.Max, batchRays.Memory + rayIndex, out _))
+                            {
+                                leafTester.TestLeaf(0, batchOriginalRays.Memory + rayIndex, &((batchRays.Memory + rayIndex)->MaximumT), pool);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        for (int i = 0; i < entry.RayCount; ++i)
+                        {
+                            var rayIndex = rayStackStart[i];
+                            tree.RayCast(entry.NodeIndex, batchRays.Memory + rayIndex, batchOriginalRays.Memory + rayIndex, fallbackStack, pool, ref leafTester);
+                        }
                     }
                 }
             }
