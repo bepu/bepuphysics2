@@ -301,7 +301,7 @@ namespace BepuPhysics.Collidables
 
         }
 
-        static void ReduceFace(ref QuickList<int> faceVertexIndices, Vector3 faceNormal, Span<Vector3> points, float planeEpsilon, ref QuickList<Vector2> facePoints, ref Buffer<int> allowVertex, ref QuickList<int> reducedIndices)
+        static void ReduceFace(ref QuickList<int> faceVertexIndices, Vector3 faceNormal, Span<Vector3> points, float planeEpsilon, ref QuickList<Vector2> facePoints, ref Buffer<int> allowVertex, ref QuickList<int> reducedIndices, ref IndexSet reducedIndicesSet)
         {
             Debug.Assert(facePoints.Count == 0 && reducedIndices.Count == 0 && facePoints.Span.Length >= faceVertexIndices.Count && reducedIndices.Span.Length >= faceVertexIndices.Count);
             for (int i = faceVertexIndices.Count - 1; i >= 0; --i)
@@ -394,6 +394,8 @@ namespace BepuPhysics.Collidables
             var greatestDistance = (float)Math.Sqrt(greatestDistanceSquared);
             var initialOffsetDirection = (facePoints[initialIndex] - centroid) / greatestDistance;
             var previousEdgeDirection = new Vector2(initialOffsetDirection.Y, -initialOffsetDirection.X);
+            reducedIndicesSet.Clear();
+            reducedIndicesSet.AddUnsafely(faceVertexIndices[initialIndex]);
             reducedIndices.AllocateUnsafely() = faceVertexIndices[initialIndex];
 
             var previousEndIndex = initialIndex;
@@ -401,7 +403,7 @@ namespace BepuPhysics.Collidables
             {
                 var nextIndex = FindNextIndexForFaceHull(facePoints[previousEndIndex], previousEdgeDirection, planeEpsilon, ref facePoints);
                 //This can return -1 in the event of a completely degenerate face.
-                if (nextIndex == -1 || reducedIndices.Contains(faceVertexIndices[nextIndex]))
+                if (nextIndex == -1 || reducedIndicesSet.Contains(faceVertexIndices[nextIndex]))
                 {
                     if (nextIndex >= 0)
                     {
@@ -413,6 +415,8 @@ namespace BepuPhysics.Collidables
                         Debug.Assert(cycleStartIndex >= 0);
                         if (cycleStartIndex > 0)
                         {
+                            for (int j = 0; j < cycleStartIndex; ++j)
+                                reducedIndicesSet.Remove(reducedIndices[j]);
                             //Note that order matters; can't do a last element swapping remove.
                             reducedIndices.Span.CopyTo(cycleStartIndex, reducedIndices.Span, 0, reducedIndices.Count - cycleStartIndex);
                             reducedIndices.Count -= cycleStartIndex;
@@ -421,6 +425,7 @@ namespace BepuPhysics.Collidables
                     break;
                 }
                 reducedIndices.AllocateUnsafely() = faceVertexIndices[nextIndex];
+                reducedIndicesSet.AddUnsafely(faceVertexIndices[nextIndex]);
                 previousEdgeDirection = Vector2.Normalize(facePoints[nextIndex] - facePoints[previousEndIndex]);
                 previousEndIndex = nextIndex;
             }
@@ -429,7 +434,7 @@ namespace BepuPhysics.Collidables
             for (int i = 0; i < faceVertexIndices.Count; ++i)
             {
                 var index = faceVertexIndices[i];
-                if (!reducedIndices.Contains(index))
+                if (!reducedIndicesSet.Contains(index))
                 {
                     allowVertex[index] = 0;
                 }
@@ -738,9 +743,10 @@ namespace BepuPhysics.Collidables
             Debug.Assert(rawFaceVertexIndices.Count >= 2);
             var facePoints = new QuickList<Vector2>(points.Length, pool);
             var reducedFaceIndices = new QuickList<int>(points.Length, pool);
+            var reducedIndicesSet = new IndexSet(pool, points.Length);
 
 
-            ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, points, planeSlabEpsilonNarrow, ref facePoints, ref allowVertices, ref reducedFaceIndices);
+            ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, points, planeSlabEpsilonNarrow, ref facePoints, ref allowVertices, ref reducedFaceIndices, ref reducedIndicesSet);
 
             var faces = new QuickList<EarlyFace>(points.Length, pool);
             var edgesToTest = new QuickList<EdgeToTest>(points.Length, pool);
@@ -806,7 +812,7 @@ namespace BepuPhysics.Collidables
                 FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, edgeToTest.Endpoints, ref pointBundles, indexOffsetBundle, allowVertices, points.Length, ref projectedOnX, ref projectedOnY, planeSlabEpsilon, ref rawFaceVertexIndices, out var faceNormal);
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
-                ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeSlabEpsilonNarrow, ref facePoints, ref allowVertices, ref reducedFaceIndices);
+                ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeSlabEpsilonNarrow, ref facePoints, ref allowVertices, ref reducedFaceIndices, ref reducedIndicesSet);
 
                 if (reducedFaceIndices.Count < 3)
                 {
@@ -852,7 +858,7 @@ namespace BepuPhysics.Collidables
                         face.VertexIndices.Count = 0;
                         facePoints.Count = 0;
                         face.VertexIndices.EnsureCapacity(rawFaceVertexIndices.Count, pool);
-                        ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeSlabEpsilonNarrow, ref facePoints, ref allowVertices, ref face.VertexIndices);
+                        ReduceFace(ref rawFaceVertexIndices, faceNormal, points, planeSlabEpsilonNarrow, ref facePoints, ref allowVertices, ref face.VertexIndices, ref reducedIndicesSet);
 #if DEBUG_STEPS
                         step.UpdateForFaceMerge(rawFaceVertexIndices, face.VertexIndices, allowVertices, i);
 #endif
@@ -933,6 +939,7 @@ namespace BepuPhysics.Collidables
             edgesToTest.Dispose(pool);
             facePoints.Dispose(pool);
             reducedFaceIndices.Dispose(pool);
+            reducedIndicesSet.Dispose(pool);
             rawFaceVertexIndices.Dispose(pool);
             pool.Return(ref allowVertices);
             pool.Return(ref projectedOnX);
