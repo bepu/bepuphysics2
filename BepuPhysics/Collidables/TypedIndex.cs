@@ -48,7 +48,7 @@ namespace BepuPhysics.Collidables
             //Note the inclusion of a set bit in the most significant slot.
             //This encodes that the index was explicitly constructed, so it is a 'real' reference.
             //A default constructed TypeIndex will have a 0 in the MSB, so we can use the default constructor for empty references.
-            Packed =((uint)type << 24) | (uint)index | (1u << 31);
+            Packed = ((uint)type << 24) | (uint)index | (1u << 31);
         }
 
         public override string ToString()
