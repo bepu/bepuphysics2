@@ -3,9 +3,9 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection
 {
-    public struct CCDContinuationIndex
+    public readonly struct CCDContinuationIndex
     {
-        public uint Packed;
+        public readonly uint Packed;
 
         //From least to most significant: 30 bits index, 1 bit type, 1 bit 'exists' flag.
 
@@ -33,7 +33,7 @@ namespace BepuPhysics.CollisionDetection
         public bool Exists
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (Packed & (1 << 31)) > 0; }
+            get { return (Packed & (1u << 31)) > 0; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -44,7 +44,7 @@ namespace BepuPhysics.CollisionDetection
             //Note the inclusion of a set bit in the most significant slot.
             //This encodes that the index was explicitly constructed, so it is a 'real' reference.
             //A default constructed TypeIndex will have a 0 in the MSB, so we can use the default constructor for empty references.
-            Packed = (uint)((type << 30) | index | (1u << 31));
+            Packed = ((uint)type << 30) | (uint)index | (1u << 31);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public CCDContinuationIndex(int packed)

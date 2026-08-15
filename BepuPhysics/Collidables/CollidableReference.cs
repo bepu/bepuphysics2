@@ -29,12 +29,12 @@ namespace BepuPhysics.Collidables
     /// Uses a bitpacked representation to refer to a body or static collidable.
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Size = 4)]
-    public struct CollidableReference : IEquatable<CollidableReference>
+    public readonly struct CollidableReference : IEquatable<CollidableReference>
     {
         /// <summary>
         /// Bitpacked representation of the collidable reference.
         /// </summary>
-        public uint Packed;
+        public readonly uint Packed;
 
         /// <summary>
         /// Gets the mobility state of the owner of this collidable.

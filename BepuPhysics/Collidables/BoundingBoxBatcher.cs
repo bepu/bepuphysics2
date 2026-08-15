@@ -9,11 +9,11 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics
 {
-    public struct BoundsContinuation
+    public readonly struct BoundsContinuation
     {
         //Bits 0-30: body index
         //Bit 31: compound flag; if set, the continuation should merge into the target slot rather than merely setting it.
-        uint packed;
+        readonly uint packed;
 
         /// <summary>
         /// Gets the index of the body associated with this continuation.
@@ -39,6 +39,12 @@ namespace BepuPhysics
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private BoundsContinuation(uint packed)
+        {
+            this.packed = packed;
+        }
+
         /// <summary>
         /// Creates a bounding box calculation continuation for a given noncompound body.
         /// </summary>
@@ -46,9 +52,7 @@ namespace BepuPhysics
         public static BoundsContinuation CreateContinuation(int bodyIndex)
         {
             Debug.Assert(bodyIndex >= 0);
-            BoundsContinuation toReturn;
-            toReturn.packed = (uint)bodyIndex;
-            return toReturn;
+            return new BoundsContinuation((uint)bodyIndex);
         }
         /// <summary>
         /// Creates a bounding box calculation continuation for a given compound body.
@@ -57,9 +61,7 @@ namespace BepuPhysics
         public static BoundsContinuation CreateCompoundChildContinuation(int compoundBodyIndex)
         {
             Debug.Assert(compoundBodyIndex >= 0);
-            BoundsContinuation toReturn;
-            toReturn.packed = (1u << 31) | (uint)compoundBodyIndex;
-            return toReturn;
+            return new BoundsContinuation((1u << 31) | (uint)compoundBodyIndex);
         }
     }
 

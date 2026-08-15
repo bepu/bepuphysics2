@@ -7,7 +7,7 @@ namespace BepuPhysics.Trees
     /// Pointer to a leaf's tree location.
     /// </summary>
     /// <remarks>The identity of a leaf is implicit in its position within the leaf array.</remarks>
-    public struct Leaf
+    public readonly struct Leaf
     {
         /// <summary>
         /// Gets the index of the node that the leaf is directly held by.
@@ -26,7 +26,7 @@ namespace BepuPhysics.Trees
             get { return (int)((packed & 0x80000000) >> 31); }
         }
 
-        uint packed;
+        readonly uint packed;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Leaf(int nodeIndex, int childIndex)

@@ -77,12 +77,12 @@ namespace BepuPhysics.CollisionDetection
 
     }
 
-    public struct PairContinuation
+    public readonly struct PairContinuation
     {
-        public int PairId;
-        public int ChildA;
-        public int ChildB;
-        public uint Packed;
+        public readonly int PairId;
+        public readonly int ChildA;
+        public readonly int ChildB;
+        public readonly uint Packed;
 
         /// <summary>
         /// Covers bits [0, 20) in the packed representation. Refers to the child pair index in a subtask generating collision task that generated this continuation.

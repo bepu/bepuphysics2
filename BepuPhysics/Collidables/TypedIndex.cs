@@ -7,12 +7,12 @@ namespace BepuPhysics.Collidables
     /// <summary>
     /// Represents an index with an associated type packed into a single integer.
     /// </summary>
-    public struct TypedIndex : IEquatable<TypedIndex>
+    public readonly struct TypedIndex : IEquatable<TypedIndex>
     {
         /// <summary>
         /// Bit packed representation of the typed index.
         /// </summary>
-        public uint Packed;
+        public readonly uint Packed;
 
         /// <summary>
         /// Gets the type index of the object.
@@ -38,7 +38,7 @@ namespace BepuPhysics.Collidables
         public bool Exists
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (Packed & (1 << 31)) > 0; }
+            get { return (Packed & (1u << 31)) > 0; }
         }
         
         public TypedIndex(int type, int index)
@@ -48,7 +48,7 @@ namespace BepuPhysics.Collidables
             //Note the inclusion of a set bit in the most significant slot.
             //This encodes that the index was explicitly constructed, so it is a 'real' reference.
             //A default constructed TypeIndex will have a 0 in the MSB, so we can use the default constructor for empty references.
-            Packed = (uint)((type << 24) | index | (1u << 31));
+            Packed =((uint)type << 24) | (uint)index | (1u << 31);
         }
 
         public override string ToString()
