@@ -11,6 +11,11 @@ jobs:
 
     runs-on: windows-latest
 
+    permissions:
+      contents: write   # gh release create
+      packages: write   # push to GitHub Packages
+      id-token: write   # OIDC token for nuget.org trusted publishing
+
     steps:
     - name: Print run_number
       run: echo ${{ github.run_number }}
@@ -41,6 +46,12 @@ jobs:
         dotnet build Demos --configuration Release --no-restore
     - name: Test
       run: dotnet test DemoTests -c Release --verbosity normal
+    - name: NuGet login (trusted publishing)
+      if: github.event_name != 'pull_request'
+      uses: NuGet/login@v1
+      id: nuget-login
+      with:
+        user: bepuentertainment
     - name: Publish
       if: github.event_name != 'pull_request'
       run: |
@@ -48,7 +59,7 @@ jobs:
         dotnet pack "BepuPhysics" -c Release
         dotnet pack "BepuUtilities" -c Release
         dotnet nuget push "**/*.nupkg" -s "github" -k "${{secrets.GITHUB_TOKEN}}" --skip-duplicate
-        dotnet nuget push "**/*.nupkg" -s "https://api.nuget.org/v3/index.json" -k "${{secrets.NUGET_KEY}}" --skip-duplicate
+        dotnet nuget push "**/*.nupkg" -s "https://api.nuget.org/v3/index.json" -k "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --skip-duplicate
     - name: Create GitHub Release Draft
       run: |
         gh release create ${{ env.VERSION }} --title "v${{ env.VERSION }}" --notes "Release notes for ${{ env.VERSION }}" --draft
