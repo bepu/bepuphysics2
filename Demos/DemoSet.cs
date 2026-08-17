@@ -47,6 +47,7 @@ public class DemoSet
         AddOption<CarDemo>();
         AddOption<TankDemo>();
         AddOption<CharacterDemo>();
+        AddOption<SimpleCharacterDemo>();
         AddOption<RagdollTubeDemo>();
         AddOption<PyramidDemo>();
         AddOption<ColosseumDemo>();
