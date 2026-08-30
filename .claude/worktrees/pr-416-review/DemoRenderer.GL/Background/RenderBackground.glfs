@@ -1,0 +1,14 @@
+#version 450
+
+layout(location = 0) in vec3 varying_Offset;
+layout(location = 0) out vec3 out_var_SV_Target0;
+
+void main()
+{
+    vec3 _33 = normalize(varying_Offset);
+    float _34 = dot(_33, normalize(vec3(0.37000000476837158203125, 0.930000007152557373046875, 0.300000011920928955078125)));
+    float _35 = _34 * _34;
+    float _36 = _35 * _35;
+    out_var_SV_Target0 = (vec3(0.125) + (vec3(0.12800000607967376708984375, 0.28299999237060546875, 0.855000019073486328125) * sqrt(clamp(_33.y, 0.0, 1.0)))) + ((vec3(1.0) * (_36 * _36)) * ((_34 >= 0.0) ? 0.5 : 0.199999988079071044921875));
+}
+

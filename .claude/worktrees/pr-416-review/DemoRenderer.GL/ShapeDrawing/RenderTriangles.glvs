@@ -1,0 +1,80 @@
+#version 450
+
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+
+struct Instance
+{
+    vec3 A;
+    uint PackedColor;
+    vec3 B;
+    float X;
+    vec3 C;
+    float Y;
+    uvec2 PackedOrientation;
+    float Z;
+    float Padding;
+};
+
+layout(binding = 0, std140) uniform type_VertexConstants
+{
+    mat4 Projection;
+    vec3 CameraPosition;
+    float Padding0;
+    vec3 CameraRight;
+    float Padding1;
+    vec3 CameraUp;
+    float Padding2;
+    vec3 CameraBackward;
+} VertexConstants;
+
+layout(binding = 0, std430) readonly buffer type_StructuredBuffer_Instance
+{
+    Instance _m0[];
+} Instances;
+
+layout(location = 0) out vec3 varying_RayDirection;
+layout(location = 1) flat out vec3 varying_Position;
+layout(location = 2) flat out uint varying_PackedColor;
+layout(location = 3) flat out vec4 varying_Orientation;
+
+void main()
+{
+    int _60 = int(uint(gl_VertexID) / 3u);
+    int _64 = int(uint(gl_VertexID) - uint(_60 * 3));
+    uint _65 = uint(_60);
+    vec3 _86 = vec3(Instances._m0[_65].X, Instances._m0[_65].Y, Instances._m0[_65].Z) - VertexConstants.CameraPosition;
+    uint _93 = (Instances._m0[_65].PackedOrientation.x & 32768u) << 16u;
+    uint _97 = Instances._m0[_65].PackedOrientation.x >> 16u;
+    uint _103 = (_97 & 32768u) << 16u;
+    uint _113 = (Instances._m0[_65].PackedOrientation.y & 32768u) << 16u;
+    uint _117 = Instances._m0[_65].PackedOrientation.y >> 16u;
+    uint _123 = (_117 & 32768u) << 16u;
+    vec4 _127 = vec4(uintBitsToFloat((floatBitsToUint(float(Instances._m0[_65].PackedOrientation.x & 32767u) * 3.0518509447574615478515625e-05) | _93) | _93), uintBitsToFloat((floatBitsToUint(float(_97 & 32767u) * 3.0518509447574615478515625e-05) | _103) | _103), uintBitsToFloat((floatBitsToUint(float(Instances._m0[_65].PackedOrientation.y & 32767u) * 3.0518509447574615478515625e-05) | _113) | _113), uintBitsToFloat((floatBitsToUint(float(_117 & 32767u) * 3.0518509447574615478515625e-05) | _123) | _123));
+    vec4 _130 = _127 / vec4(length(_127));
+    float _131 = _130.x;
+    float _132 = _131 + _131;
+    float _133 = _130.y;
+    float _134 = _133 + _133;
+    float _135 = _130.z;
+    float _136 = _135 + _135;
+    float _138 = _131 * _134;
+    float _139 = _131 * _136;
+    float _140 = _133 * _134;
+    float _141 = _133 * _136;
+    float _142 = _135 * _136;
+    float _143 = _130.w;
+    float _144 = _143 * _132;
+    float _145 = _143 * _134;
+    float _146 = _143 * _136;
+    float _152 = 1.0 - (_131 * _132);
+    vec3 _169 = _86 + (mat3(vec3((1.0 - _140) - _142, _138 + _146, _139 - _145), vec3(_138 - _146, _152 - _142, _141 + _144), vec3(_139 + _145, _141 - _144, _152 - _140)) * mix(mix(Instances._m0[_65].B, Instances._m0[_65].C, bvec3(_64 == 1)), Instances._m0[_65].A, bvec3(_64 == 0)));
+    gl_Position = VertexConstants.Projection * vec4(_169 * mat3(VertexConstants.CameraRight, VertexConstants.CameraUp, VertexConstants.CameraBackward), 1.0);
+    varying_RayDirection = _169;
+    varying_Position = _86;
+    varying_PackedColor = Instances._m0[_65].PackedColor;
+    varying_Orientation = _130;
+}
+

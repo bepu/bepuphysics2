@@ -1,0 +1,47 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+using BepuPhysics.CollisionDetection;
+using System;
+using System.Numerics;
+using System.Runtime.CompilerServices;
+using DemoRenderer.Constraints;
+using BepuUtilities.Collections;
+
+namespace BepuPhysics.Constraints.Contact
+{  
+<#
+for (int convexity = 0; convexity <= 1; ++convexity)
+{
+	var convex = convexity == 0;
+	var convexitySuffix = convex ? "" : "Nonconvex";
+	for (int bodyCount = 1; bodyCount <= 2; ++bodyCount)
+	{
+		var bodySuffix = bodyCount == 1 ? "OneBody" : "";
+		for (int contactCount = convex ? 1 : 2; contactCount <= (convex ? 4 : 4); ++contactCount)
+		{
+#>
+    struct Contact<#=contactCount#><#=convexitySuffix#><#=bodySuffix#>LineExtractor : IConstraintLineExtractor<Contact<#=contactCount#><#=convexitySuffix#><#=bodySuffix#>PrestepData>
+    {
+        public static int LinesPerConstraint => <#=contactCount * 2#>;
+
+        public static unsafe void ExtractLines(ref Contact<#=contactCount#><#=convexitySuffix#><#=bodySuffix#>PrestepData prestepBundle, int setIndex, int* bodyIndices,
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
+        {
+            ref var poseA = ref bodies.Sets[setIndex].SolverStates[bodyIndices[0]].Motion.Pose;
+<#for (int i = 0; i < contactCount; ++i) { if(convex) {#>
+            ContactLines.Add(poseA, ref prestepBundle.Contact<#=i#>.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact<#=i#>.Depth, tint, ref lines);
+<#} else {#>
+            ContactLines.Add(poseA, ref prestepBundle.Contact<#=i#>.Offset, ref prestepBundle.Contact<#=i#>.Normal, ref prestepBundle.Contact<#=i#>.Depth, tint, ref lines);
+<#}}#>
+        }
+    }
+<#   
+		}
+	}
+}
+#>
+}

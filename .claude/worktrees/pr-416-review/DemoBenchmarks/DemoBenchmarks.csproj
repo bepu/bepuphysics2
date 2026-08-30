@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <StartArguments>-f *CollisionBatcherTaskBenchmarks.* *GroupedCollisionTesterBenchmarks.* *GatherScatterBenchmarks.* *OneBodyConstraintBenchmarks.* *TwoBodyConstraintBenchmarks.* *ThreeBodyConstraintBenchmarks.* *FourBodyConstraintBenchmarks.* *SweepBenchmarks.* *ShapeRayBenchmarks.* *ShapePileBenchmark.* *RagdollTubeBenchmark.* --join</StartArguments>
+    <!--<StartArguments>-f *CollisionBatcherTaskBenchmarks.* *ConvexCollisionTesterBenchmarks.* *GatherScatterBenchmarks.* *OneBodyConstraintBenchmarks.* *OneBodyConstraintBenchmarksDeep.* *TwoBodyConstraintBenchmarks.* *TwoBodyConstraintBenchmarksDeep.* *ThreeBodyConstraintBenchmarks.* *FourBodyConstraintBenchmarks.* *SweepBenchmarks.* *SweepBenchmarksDeep.* *ShapeRayBenchmarksDeep.* *ShapePileBenchmark.* *RagdollTubeBenchmark.*</StartArguments>-->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.13.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BepuPhysics\BepuPhysics.csproj" />
+    <ProjectReference Include="..\BepuUtilities\BepuUtilities.csproj" />
+  </ItemGroup>
+
+</Project>

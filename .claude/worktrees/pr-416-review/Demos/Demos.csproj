@@ -1,0 +1,62 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <Configurations>Debug;Release</Configurations>
+    <LangVersion>latest</LangVersion>
+    <Platforms>AnyCPU;x86;x64</Platforms>
+    <!--<TieredCompilation>false</TieredCompilation>-->
+  </PropertyGroup>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Condition="'$(Configuration)'=='Debug'" Command="dotnet &quot;$(ProjectDir)..\DemoContentBuilder\bin\x64\$(Configuration)\net10.0\DemoContentBuilder.dll&quot; &quot;$(ProjectDir)$(ProjectName).content&quot; -debug" />
+    <Exec Condition="'$(Configuration)'!='Debug'" Command="dotnet &quot;$(ProjectDir)..\DemoContentBuilder\bin\x64\Release\net10.0\DemoContentBuilder.dll&quot; &quot;$(ProjectDir)$(ProjectName).content&quot;" />
+  </Target>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;RELEASE</DefineConstants>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BepuPhysics\BepuPhysics.csproj" />
+    <ProjectReference Include="..\BepuUtilities\BepuUtilities.csproj" />
+    <ProjectReference Include="..\DemoContentLoader\DemoContentLoader.csproj" />
+    <ProjectReference Include="..\DemoRenderer\DemoRenderer.csproj" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <EmbeddedResource Include="Demos.contentarchive" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <None Update="Demos\Characters\CharacterMotionConstraint.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>CharacterMotionConstraint.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Compile Update="Demos\Characters\CharacterMotionConstraint.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>CharacterMotionConstraint.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+
+</Project>

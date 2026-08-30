@@ -1,0 +1,40 @@
+#version 450
+
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+
+struct ImageInstance
+{
+    uint PackedMinimum;
+    uint PackedHorizontalAxis;
+    uint PackedSize;
+    uint PackedColor;
+};
+
+layout(binding = 0, std140) uniform type_VertexConstants
+{
+    vec2 PackedToScreenScale;
+    vec2 ScreenToNDCScale;
+} VertexConstants;
+
+layout(binding = 0, std430) readonly buffer type_StructuredBuffer_ImageInstance
+{
+    ImageInstance _m0[];
+} Instances;
+
+layout(location = 0) out vec2 varying_TextureCoordinates;
+layout(location = 1) flat out vec4 varying_Color;
+
+void main()
+{
+    uint _48 = uint(int(uint(gl_VertexID) >> 2u));
+    vec2 _70 = vec2(float(Instances._m0[_48].PackedHorizontalAxis & 65535u) - 32767.0, float(Instances._m0[_48].PackedHorizontalAxis >> 16u) - 32767.0) * vec2(3.0518509447574615478515625e-05);
+    vec2 _83 = vec2(float(uint(gl_VertexID) & 1u), float((uint(gl_VertexID) >> 1u) & 1u));
+    vec2 _84 = vec2(float(Instances._m0[_48].PackedSize & 65535u) * 0.06250095367431640625, float(Instances._m0[_48].PackedSize >> 16u) * 0.06250095367431640625) * _83;
+    gl_Position = vec4(((((vec2(float(Instances._m0[_48].PackedMinimum & 65535u), float(Instances._m0[_48].PackedMinimum >> 16u)) * VertexConstants.PackedToScreenScale) + (_70 * _84.x)) + (vec2(-_70.y, _70.x) * _84.y)) * VertexConstants.ScreenToNDCScale) + vec2(-1.0, 1.0), 0.5, 1.0);
+    varying_TextureCoordinates = _83;
+    varying_Color = vec4(float(Instances._m0[_48].PackedColor & 255u) * 0.0039215688593685626983642578125, float((Instances._m0[_48].PackedColor >> 8u) & 255u) * 0.0039215688593685626983642578125, float((Instances._m0[_48].PackedColor >> 16u) & 255u) * 0.0039215688593685626983642578125, float((Instances._m0[_48].PackedColor >> 24u) & 255u) * 0.0039215688593685626983642578125);
+}
+

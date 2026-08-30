@@ -1,0 +1,1969 @@
+; Assembly listing for method AosBaselines.CylinderPairScalarTester:Test(byref,byref,float,byref,byref,byref,byref) (FullOpts)
+; Emitting BLENDED_CODE for generic X64 + VEX on Windows
+; FullOpts code
+; optimized code
+; rbp based frame
+; partially interruptible
+; No PGO data
+; 0 inlinees with PGO data; 245 single block inlinees; 71 inlinees without PGO data
+
+G_M000_IG01:                ;; offset=0x0000
+       push     rbp
+       push     r14
+       push     rdi
+       push     rsi
+       push     rbx
+       sub      rsp, 0x5B0
+       vmovaps  xmmword ptr [rsp+0x5A0], xmm6
+       vmovaps  xmmword ptr [rsp+0x590], xmm7
+       vmovaps  xmmword ptr [rsp+0x580], xmm8
+       vmovaps  xmmword ptr [rsp+0x570], xmm9
+       vmovaps  xmmword ptr [rsp+0x560], xmm10
+       vmovaps  xmmword ptr [rsp+0x550], xmm11
+       vmovaps  xmmword ptr [rsp+0x540], xmm12
+       vmovaps  xmmword ptr [rsp+0x530], xmm13
+       vmovaps  xmmword ptr [rsp+0x520], xmm14
+       vmovaps  xmmword ptr [rsp+0x510], xmm15
+       lea      rbp, [rsp+0x5D0]
+       vxorps   xmm4, xmm4, xmm4
+       vmovdqu  ymmword ptr [rbp-0x140], ymm4
+       vmovdqu  ymmword ptr [rbp-0x120], ymm4
+       vmovdqu  ymmword ptr [rbp-0x100], ymm4
+       vmovdqu  ymmword ptr [rbp-0xE0], ymm4
+       mov      rsi, rcx
+       mov      rdi, rdx
+       mov      rbx, bword ptr [rbp+0x40]
+ 
+G_M000_IG02:                ;; offset=0x009D
+       vxorps   ymm0, ymm0, ymm0
+       vmovdqu  ymmword ptr [rbx], ymm0
+       vmovdqu  ymmword ptr [rbx+0x20], ymm0
+       vmovdqu  ymmword ptr [rbx+0x40], ymm0
+       mov      r8, bword ptr [rbp+0x30]
+       vmovups  xmm0, xmmword ptr [r8]
+       vmovaps  xmm1, xmm0
+       vaddss   xmm3, xmm1, xmm1
+       vmovshdup xmm4, xmm0
+       vaddss   xmm5, xmm4, xmm4
+       vunpckhps xmm6, xmm0, xmm0
+       vaddss   xmm7, xmm6, xmm6
+       vmulss   xmm1, xmm3, xmm1
+       vmulss   xmm8, xmm5, xmm4
+       vmulss   xmm9, xmm7, xmm6
+       vmulss   xmm4, xmm3, xmm4
+       vmulss   xmm10, xmm3, xmm6
+       vshufps  xmm0, xmm0, xmm0, -1
+       vmulss   xmm3, xmm3, xmm0
+       vmulss   xmm6, xmm5, xmm6
+       vmulss   xmm5, xmm5, xmm0
+       vmulss   xmm0, xmm7, xmm0
+       vmovss   xmm7, dword ptr [reloc @RWD00]
+       vsubss   xmm11, xmm7, xmm8
+       vsubss   xmm11, xmm11, xmm9
+       vaddss   xmm12, xmm4, xmm0
+       vinsertps xmm11, xmm11, xmm12, 16
+       vsubss   xmm12, xmm10, xmm5
+       vinsertps xmm11, xmm11, xmm12, 40
+       vsubss   xmm0, xmm4, xmm0
+       vsubss   xmm1, xmm7, xmm1
+       vsubss   xmm4, xmm1, xmm9
+       vinsertps xmm0, xmm0, xmm4, 16
+       vaddss   xmm4, xmm6, xmm3
+       vinsertps xmm0, xmm0, xmm4, 40
+       vaddss   xmm4, xmm10, xmm5
+       vsubss   xmm3, xmm6, xmm3
+       vinsertps xmm3, xmm4, xmm3, 16
+       vsubss   xmm1, xmm1, xmm8
+       vinsertps xmm1, xmm3, xmm1, 40
+       mov      r8, bword ptr [rbp+0x38]
+       vmovups  xmm3, xmmword ptr [r8]
+       vmovaps  xmm4, xmm3
+       vaddss   xmm5, xmm4, xmm4
+       vmovshdup xmm6, xmm3
+       vaddss   xmm8, xmm6, xmm6
+       vunpckhps xmm9, xmm3, xmm3
+       vaddss   xmm10, xmm9, xmm9
+       vmulss   xmm4, xmm5, xmm4
+       vmulss   xmm12, xmm8, xmm6
+       vmulss   xmm13, xmm10, xmm9
+       vmulss   xmm6, xmm5, xmm6
+       vmulss   xmm14, xmm5, xmm9
+       vshufps  xmm3, xmm3, xmm3, -1
+       vmulss   xmm5, xmm5, xmm3
+       vmulss   xmm9, xmm8, xmm9
+       vmulss   xmm8, xmm8, xmm3
+       vmulss   xmm3, xmm10, xmm3
+ 
+G_M000_IG03:                ;; offset=0x01A3
+       vsubss   xmm10, xmm7, xmm12
+       vsubss   xmm10, xmm10, xmm13
+       vaddss   xmm15, xmm6, xmm3
+       vinsertps xmm10, xmm10, xmm15, 16
+       vsubss   xmm15, xmm14, xmm8
+       vinsertps xmm10, xmm10, xmm15, 40
+       vsubss   xmm3, xmm6, xmm3
+       vsubss   xmm4, xmm7, xmm4
+       vsubss   xmm6, xmm4, xmm13
+       vinsertps xmm3, xmm3, xmm6, 16
+       vaddss   xmm6, xmm9, xmm5
+       vinsertps xmm6, xmm3, xmm6, 40
+       vaddss   xmm3, xmm14, xmm8
+       vsubss   xmm5, xmm9, xmm5
+       vinsertps xmm3, xmm3, xmm5, 16
+       vsubss   xmm4, xmm4, xmm12
+       vinsertps xmm8, xmm3, xmm4, 40
+       vmovshdup xmm3, xmm10
+       vunpckhps xmm4, xmm10, xmm10
+       vunpckhps xmm5, xmm6, xmm6
+       vmovaps  xmm9, xmm10
+       vmovaps  xmm12, xmm6
+       vinsertps xmm9, xmm9, xmm12, 16
+       vmovaps  xmm12, xmm8
+       vinsertps xmm9, xmm9, xmm12, 40
+       vmovshdup xmm12, xmm6
+       vinsertps xmm3, xmm3, xmm12, 16
+       vmovshdup xmm12, xmm8
+       vinsertps xmm3, xmm3, xmm12, 40
+       vinsertps xmm4, xmm4, xmm5, 16
+       vunpckhps xmm5, xmm8, xmm8
+       vinsertps xmm4, xmm4, xmm5, 40
+       vmovaps  xmm5, xmm11
+       vbroadcastss xmm5, xmm5
+       vmulps   xmm5, xmm5, xmm9
+       vmovshdup xmm12, xmm11
+       vbroadcastss xmm12, xmm12
+       vmulps   xmm12, xmm12, xmm3
+       vaddps   xmm5, xmm12, xmm5
+       vunpckhps xmm11, xmm11, xmm11
+       vbroadcastss xmm11, xmm11
+       vmulps   xmm11, xmm11, xmm4
+       vaddps   xmm5, xmm11, xmm5
+       vmovsd   qword ptr [rbp-0xE8], xmm5
+       vextractps dword ptr [rbp-0xE0], xmm5, 2
+       vmovaps  xmm5, xmm0
+       vbroadcastss xmm5, xmm5
+       vmulps   xmm5, xmm5, xmm9
+       vmovshdup xmm11, xmm0
+       vbroadcastss xmm11, xmm11
+       vmulps   xmm11, xmm11, xmm3
+       vaddps   xmm5, xmm11, xmm5
+       vunpckhps xmm0, xmm0, xmm0
+       vbroadcastss xmm0, xmm0
+       vmulps   xmm0, xmm0, xmm4
+       vaddps   xmm0, xmm0, xmm5
+       vmovsd   qword ptr [rbp-0xDC], xmm0
+       vextractps dword ptr [rbp-0xD4], xmm0, 2
+       vmovaps  xmm0, xmm1
+       vbroadcastss xmm0, xmm0
+       vmulps   xmm0, xmm0, xmm9
+ 
+G_M000_IG04:                ;; offset=0x02DC
+       vmovshdup xmm5, xmm1
+       vbroadcastss xmm5, xmm5
+       vmulps   xmm3, xmm5, xmm3
+       vaddps   xmm0, xmm3, xmm0
+       vunpckhps xmm1, xmm1, xmm1
+       vbroadcastss xmm1, xmm1
+       vmulps   xmm1, xmm1, xmm4
+       vaddps   xmm0, xmm1, xmm0
+       vmovsd   qword ptr [rbp-0xD0], xmm0
+       vextractps dword ptr [rbp-0xC8], xmm0, 2
+       vmovsd   xmm0, qword ptr [r9]
+       vinsertps xmm0, xmm0, dword ptr [r9+0x08], 40
+       vinsertps xmm0, xmm0, xmm0, 56
+       vmovaps  xmm1, xmm10
+       vinsertps xmm1, xmm1, xmm1, 56
+       vmulps   xmm1, xmm1, xmm0
+       vpermilps xmm3, xmm1, -11
+       vaddps   xmm3, xmm3, xmm1
+       vpermilps xmm1, xmm1, -86
+       vaddps   xmm1, xmm1, xmm3
+       vmovaps  xmm3, xmm6
+       vinsertps xmm3, xmm3, xmm3, 56
+       vmulps   xmm3, xmm3, xmm0
+       vpermilps xmm4, xmm3, -11
+       vaddps   xmm4, xmm4, xmm3
+       vpermilps xmm3, xmm3, -86
+       vaddps   xmm3, xmm3, xmm4
+       vmovaps  xmm4, xmm8
+       vinsertps xmm4, xmm4, xmm4, 56
+       vmulps   xmm0, xmm4, xmm0
+       vinsertps xmm1, xmm1, xmm3, 16
+       vpermilps xmm3, xmm0, -11
+       vaddps   xmm3, xmm3, xmm0
+       vpermilps xmm0, xmm0, -86
+       vaddps   xmm0, xmm0, xmm3
+       vinsertps xmm9, xmm1, xmm0, 40
+       vmovaps  xmmword ptr [rbp-0x100], xmm9
+       vmovaps  xmm0, xmm9
+       vxorps   xmm0, xmm0, xmmword ptr [reloc @RWD16]
+       vmovaps  xmmword ptr [rbp-0x110], xmm0
+       vmovaps  xmm0, xmmword ptr [rbp-0x110]
+       vinsertps xmm0, xmm0, xmm0, 56
+       vmulps   xmm0, xmm0, xmm0
+       vpermilps xmm1, xmm0, -11
+       vaddps   xmm1, xmm1, xmm0
+       vpermilps xmm0, xmm0, -86
+       vaddps   xmm0, xmm0, xmm1
+       vsqrtss  xmm0, xmm0, xmm0
+       vdivss   xmm1, xmm7, xmm0
+       vbroadcastss xmm1, xmm1
+       vmovaps  xmm3, xmmword ptr [rbp-0x110]
+       vmulps   xmm1, xmm1, xmm3
+       vmovaps  xmmword ptr [rbp-0x120], xmm1
+       vmovss   xmm1, dword ptr [reloc @RWD32]
+       vucomiss xmm1, xmm0
+       jbe      SHORT G_M000_IG06
+ 
+G_M000_IG05:                ;; offset=0x0408
+       vmovaps  xmm0, xmmword ptr [rbp-0x120]
+       vxorps   xmm1, xmm1, xmm1
+       vinsertps xmm0, xmm0, xmm1, 1
+       vmovaps  xmmword ptr [rbp-0x120], xmm0
+       vmovaps  xmm0, xmmword ptr [rbp-0x120]
+       vmovaps  xmm1, xmm7
+       vinsertps xmm0, xmm0, xmm1, 16
+       vmovaps  xmmword ptr [rbp-0x120], xmm0
+       vmovaps  xmm0, xmmword ptr [rbp-0x120]
+       vxorps   xmm1, xmm1, xmm1
+       vinsertps xmm0, xmm0, xmm1, 36
+       vmovaps  xmmword ptr [rbp-0x120], xmm0
+ 
+G_M000_IG06:                ;; offset=0x0456
+       vmovss   dword ptr [rbp+0x20], xmm2
+       vxorps   xmm11, xmm2, xmmword ptr [reloc @RWD16]
+       vmovss   xmm0, dword ptr [rsi+0x04]
+       vmaxss   xmm0, xmm0, dword ptr [rsi]
+       vmovss   xmm1, dword ptr [rdi+0x04]
+       vmaxss   xmm1, xmm1, dword ptr [rdi]
+       vminss   xmm0, xmm0, xmm1
+       lea      r8, [rbp-0x120]
+       mov      qword ptr [rsp+0x20], r8
+       vmulss   xmm0, xmm0, dword ptr [reloc @RWD36]
+       vmovss   dword ptr [rsp+0x28], xmm0
+       vmovss   dword ptr [rsp+0x30], xmm11
+       lea      r8, [rbp-0x124]
+       mov      qword ptr [rsp+0x38], r8
+       lea      r8, [rbp-0x120]
+       mov      qword ptr [rsp+0x40], r8
+       lea      r8, [rbp-0x140]
+       mov      qword ptr [rsp+0x48], r8
+       mov      dword ptr [rsp+0x50], 25
+       lea      r8, [rbp-0x110]
+       lea      r9, [rbp-0xE8]
+       mov      rcx, rdi
+       mov      rdx, rsi
+       call     [AosBaselines.ScalarDepthRefiner`4[BepuPhysics.Collidables.Cylinder,AosBaselines.CylinderSupportScalar,BepuPhysics.Collidables.Cylinder,AosBaselines.CylinderSupportScalar]:FindMinimumDepth(byref,byref,byref,byref,byref,float,float,byref,byref,byref,int)]
+       vucomiss xmm11, dword ptr [rbp-0x124]
+       ja       G_M000_IG52
+ 
+G_M000_IG07:                ;; offset=0x04ED
+       vmovups  xmm0, xmmword ptr [rbp-0xDC]
+       vinsertps xmm1, xmm0, xmm0, 56
+       vmovaps  xmmword ptr [rbp-0x3B0], xmm1
+       vmovaps  xmm2, xmmword ptr [rbp-0x120]
+       vmovaps  xmmword ptr [rbp-0x430], xmm2
+       vinsertps xmm3, xmm2, xmm2, 56
+       vmulps   xmm3, xmm3, xmm1
+       vpermilps xmm4, xmm3, -11
+       vaddps   xmm4, xmm4, xmm3
+       vpermilps xmm3, xmm3, -86
+       vaddps   xmm3, xmm3, xmm4
+       vdivss   xmm4, xmm7, xmm3
+       vmovss   dword ptr [rbp-0x144], xmm4
+       vmovss   xmm5, dword ptr [rbp-0x11C]
+       vdivss   xmm11, xmm7, xmm5
+       vmovss   dword ptr [rbp-0x148], xmm11
+       vbroadcastss xmm12, xmm3
+       vxorps   xmm13, xmm13, xmm13
+       vcmpgtps xmm12, xmm12, xmm13
+       vmovss   xmm13, dword ptr [rsi+0x04]
+       vxorps   xmm14, xmm13, xmmword ptr [reloc @RWD16]
+       vandps   xmm14, xmm14, xmm12
+       vandnps  xmm13, xmm12, xmm13
+       vorps    xmm13, xmm13, xmm14
+       vbroadcastss xmm13, xmm13
+       vmulps   xmm13, xmm13, xmm0
+       vmovaps  xmm14, xmmword ptr [rbp-0x110]
+       vmovaps  xmmword ptr [rbp-0x440], xmm14
+       vaddps   xmm13, xmm13, xmm14
+       vmovaps  xmmword ptr [rbp-0x160], xmm13
+       vbroadcastss xmm15, xmm5
+       vxorps   xmm14, xmm14, xmm14
+       vcmpltps xmm14, xmm15, xmm14
+       vmovss   xmm15, dword ptr [rdi+0x04]
+       vxorps   xmm11, xmm15, xmmword ptr [reloc @RWD16]
+       vblendvps xmm11, xmm15, xmm11, xmm14
+       vandps   xmm3, xmm3, xmmword ptr [reloc @RWD48]
+       vmovss   dword ptr [rbp-0x39C], xmm3
+       vucomiss xmm3, dword ptr [reloc @RWD64]
+       seta     al
+       movzx    rax, al
+       vandps   xmm5, xmm5, xmmword ptr [reloc @RWD48]
+       vmovss   dword ptr [rbp-0x398], xmm5
+       vucomiss xmm5, dword ptr [reloc @RWD64]
+       seta     cl
+       movzx    rcx, cl
+       vxorps   xmm14, xmm14, xmm14
+       vxorps   xmm15, xmm15, xmm15
+       vxorps   xmm5, xmm5, xmm5
+       vmovaps  xmmword ptr [rbp-0x170], xmm5
+       vxorps   xmm3, xmm3, xmm3
+       vmovaps  xmmword ptr [rbp-0x180], xmm3
+       vmovaps  xmm3, xmmword ptr [rbp-0x140]
+       vmovups  xmmword ptr [rbp-0x560], xmm3
+       vmovss   xmm5, dword ptr [rbp-0x124]
+       vxorps   xmm3, xmm5, xmmword ptr [reloc @RWD16]
+       vbroadcastss xmm3, xmm3
+       vmulps   xmm3, xmm3, xmm2
+       vaddps   xmm3, xmm3, xmmword ptr [rbp-0x560]
+       vsubps   xmm3, xmm3, xmmword ptr [rbp-0x440]
+       vmovaps  xmm5, xmm3
+ 
+G_M000_IG08:                ;; offset=0x0661
+       vinsertps xmm5, xmm5, xmm5, 56
+       vmulps   xmm5, xmm5, xmm1
+       vmovaps  xmmword ptr [rbp-0x280], xmm5
+       vpermilps xmm5, xmm5, -11
+       vaddps   xmm5, xmm5, xmmword ptr [rbp-0x280]
+       vmovups  xmmword ptr [rbp-0x560], xmm5
+       vpermilps xmm5, xmmword ptr [rbp-0x280], -86
+       vaddps   xmm5, xmm5, xmmword ptr [rbp-0x560]
+       vbroadcastss xmm5, xmm5
+       vmulps   xmm5, xmm5, xmm0
+       vsubps   xmm3, xmm3, xmm5
+       vmovaps  xmmword ptr [rbp-0x190], xmm3
+       vxorps   xmm5, xmm5, xmm5
+       vmovsd   qword ptr [rbp-0x550], xmm5
+       vmovss   xmm5, dword ptr [rbp-0x140]
+       vmovsd   xmm13, qword ptr [rbp-0x550]
+       vinsertps xmm5, xmm13, xmm5, 14
+       vmovss   xmm13, dword ptr [rbp-0x138]
+       vinsertps xmm5, xmm5, xmm13, 16
+       vxorps   xmm13, xmm0, xmmword ptr [reloc @RWD16]
+       vandps   xmm13, xmm13, xmm12
+       vandnps  xmm0, xmm12, xmm0
+       vorps    xmm0, xmm0, xmm13
+       vmovaps  xmmword ptr [rbp-0x1A0], xmm0
+       vmovaps  xmmword ptr [rbp-0x1B0], xmm0
+       vmovaps  xmm13, xmmword ptr [rbp-0x160]
+       vmovaps  xmm0, xmm13
+       test     eax, ecx
+       jne      SHORT G_M000_IG10
+ 
+G_M000_IG09:                ;; offset=0x0717
+       jmp      G_M000_IG30
+ 
+G_M000_IG10:                ;; offset=0x071C
+       vmovss   xmm13, dword ptr [rbp-0x39C]
+       vmovss   dword ptr [rbp-0x1C4], xmm13
+       vmovss   xmm13, dword ptr [rbp-0x398]
+       vmovss   dword ptr [rbp-0x1C8], xmm13
+       vmovss   xmm13, dword ptr [reloc @RWD68]
+       vmovss   dword ptr [rbp-0x494], xmm13
+       vucomiss xmm13, dword ptr [rbp-0x1C8]
+       seta     dl
+       movzx    rdx, dl
+       vmovaps  xmm13, xmm5
+       vmovss   xmm3, dword ptr [rbp-0x494]
+       vucomiss xmm3, dword ptr [rbp-0x1C4]
+       seta     r8b
+       movzx    r8, r8b
+       test     r8d, edx
+       jne      G_M000_IG29
+       vmovshdup xmm13, xmm0
+       vsubss   xmm15, xmm13, xmm11
+       vmulss   xmm15, xmm15, dword ptr [rbp-0x148]
+       vmovss   dword ptr [rbp-0x284], xmm15
+       vxorps   xmm13, xmm13, xmm13
+       vmulss   xmm3, xmm15, dword ptr [rbp-0x120]
+       vmovaps  xmm15, xmm0
+       vsubss   xmm3, xmm15, xmm3
+       vinsertps xmm3, xmm13, xmm3, 14
+       vmovss   xmm15, dword ptr [rbp-0x284]
+       vmulss   xmm13, xmm15, dword ptr [rbp-0x118]
+       vunpckhps xmm15, xmm0, xmm0
+       vsubss   xmm13, xmm15, xmm13
+       vinsertps xmm3, xmm3, xmm13, 16
+       vmovaps  xmm13, xmm3
+       vmovaps  xmm15, xmm3
+       vmulss   xmm13, xmm13, xmm15
+       vmovss   dword ptr [rbp-0x544], xmm13
+       vmovshdup xmm15, xmm3
+       vmovshdup xmm13, xmm3
+       vmulss   xmm13, xmm15, xmm13
+       vaddss   xmm13, xmm13, dword ptr [rbp-0x544]
+       vsqrtss  xmm13, xmm13, xmm13
+       vmovss   dword ptr [rbp-0x1CC], xmm13
+       vdivss   xmm15, xmm7, xmm13
+       vmovss   dword ptr [rbp-0x1D0], xmm15
+       vbroadcastss xmm15, xmm15
+       vmulps   xmm3, xmm15, xmm3
+       vmovss   xmm15, dword ptr [reloc @RWD72]
+       vucomiss xmm15, xmm13
+       seta     dl
+       movzx    rdx, dl
+       vmovaps  xmm15, xmm3
+       vmovss   dword ptr [rbp-0x288], xmm15
+       mov      r8d, -1
+       xor      r10d, r10d
+       test     edx, edx
+       cmove    r8d, r10d
+       vmovd    xmm15, r8d
+       vmovaps  xmmword ptr [rbp-0x4E0], xmm15
+       vbroadcastss xmm13, dword ptr [reloc @RWD00]
+       vmovaps  xmmword ptr [rbp-0x4B0], xmm13
+       vandps   xmm15, xmm13, xmm15
+       vmovups  xmmword ptr [rbp-0x560], xmm15
+       vmovss   xmm15, dword ptr [rbp-0x288]
+       vmovups  xmmword ptr [rbp-0x570], xmm15
+       vmovaps  xmm15, xmmword ptr [rbp-0x4E0]
+       vandnps  xmm15, xmm15, xmmword ptr [rbp-0x570]
+ 
+G_M000_IG11:                ;; offset=0x0898
+       vorps    xmm15, xmm15, xmmword ptr [rbp-0x560]
+       vinsertps xmm3, xmm3, xmm15, 0
+       vmovshdup xmm15, xmm3
+       vmovss   dword ptr [rbp-0x28C], xmm15
+       mov      r8d, -1
+ 
+G_M000_IG12:                ;; offset=0x08B8
+       test     edx, edx
+       cmove    r8d, r10d
+       vmovd    xmm15, r8d
+       vmovaps  xmmword ptr [rbp-0x4F0], xmm15
+       vxorps   xmm15, xmm15, xmm15
+       vandps   xmm15, xmm15, xmmword ptr [rbp-0x4F0]
+       vmovups  xmmword ptr [rbp-0x560], xmm15
+       vmovss   xmm15, dword ptr [rbp-0x28C]
+       vmovups  xmmword ptr [rbp-0x570], xmm15
+       vmovaps  xmm15, xmmword ptr [rbp-0x4F0]
+       vandnps  xmm15, xmm15, xmmword ptr [rbp-0x570]
+       vorps    xmm15, xmm15, xmmword ptr [rbp-0x560]
+       vinsertps xmm3, xmm3, xmm15, 16
+       vmovaps  xmm15, xmm3
+       vmovups  xmmword ptr [rbp-0x560], xmm15
+       vmovss   xmm15, dword ptr [rdi]
+       vmovss   dword ptr [rbp-0x498], xmm15
+       vbroadcastss xmm15, xmm15
+       vmulps   xmm15, xmm15, xmmword ptr [rbp-0x560]
+       vmovsd   qword ptr [rbp-0x1D8], xmm15
+       vmovaps  xmmword ptr [rbp-0x4D0], xmm15
+       vxorps   xmm15, xmm15, xmmword ptr [reloc @RWD16]
+       vmovsd   qword ptr [rbp-0x1E0], xmm15
+       vmovss   xmm15, dword ptr [rbp-0x1D8]
+       vinsertps xmm15, xmm14, xmm15, 0
+       vmovups  xmmword ptr [rbp-0x560], xmm15
+       vmovaps  xmm15, xmm11
+       vmovups  xmm13, xmmword ptr [rbp-0x560]
+       vinsertps xmm13, xmm13, xmm15, 16
+       vmovsd   xmm15, qword ptr [rbp-0x1D8]
+       vmovshdup xmm15, xmm15
+       vinsertps xmm13, xmm13, xmm15, 32
+       vmovaps  xmm15, xmm0
+       vmovaps  xmmword ptr [rbp-0x450], xmm13
+       vsubps   xmm13, xmm15, xmm13
+       vinsertps xmm13, xmm13, xmm13, 56
+       vmulps   xmm13, xmm13, xmm1
+       vmovaps  xmmword ptr [rbp-0x2A0], xmm13
+       vpermilps xmm13, xmm13, -11
+       vaddps   xmm13, xmm13, xmmword ptr [rbp-0x2A0]
+       vmovups  xmmword ptr [rbp-0x560], xmm13
+       vpermilps xmm13, xmmword ptr [rbp-0x2A0], -86
+       vaddps   xmm13, xmm13, xmmword ptr [rbp-0x560]
+       vmulss   xmm13, xmm13, xmm4
+       vbroadcastss xmm13, xmm13
+       vmulps   xmm13, xmm13, xmm2
+       vaddps   xmm13, xmm13, xmmword ptr [rbp-0x450]
+       vsubps   xmm13, xmm13, xmm15
+       vinsertps xmm13, xmm13, xmm13, 56
+       vmovaps  xmmword ptr [rbp-0x3F0], xmm13
+       vmovups  xmm13, xmmword ptr [rbp-0xE8]
+       vinsertps xmm13, xmm13, xmm13, 56
+       vmovaps  xmmword ptr [rbp-0x3C0], xmm13
+       vmulps   xmm13, xmm13, xmmword ptr [rbp-0x3F0]
+       vmovaps  xmmword ptr [rbp-0x2B0], xmm13
+       vxorps   xmm13, xmm13, xmm13
+       vmovsd   qword ptr [rbp-0x550], xmm13
+       vpermilps xmm13, xmmword ptr [rbp-0x2B0], -11
+       vaddps   xmm13, xmm13, xmmword ptr [rbp-0x2B0]
+       vmovups  xmmword ptr [rbp-0x560], xmm13
+ 
+G_M000_IG13:                ;; offset=0x0A4F
+       vpermilps xmm13, xmmword ptr [rbp-0x2B0], -86
+       vaddps   xmm13, xmm13, xmmword ptr [rbp-0x560]
+       vmovsd   xmm2, qword ptr [rbp-0x550]
+       vinsertps xmm2, xmm2, xmm13, 14
+       vmovaps  xmm13, xmmword ptr [rbp-0xD0]
+       vinsertps xmm13, xmm13, xmm13, 56
+       vmovaps  xmmword ptr [rbp-0x3D0], xmm13
+       vmulps   xmm13, xmm13, xmmword ptr [rbp-0x3F0]
+       vmovaps  xmmword ptr [rbp-0x2C0], xmm13
+       vpermilps xmm13, xmm13, -11
+       vaddps   xmm13, xmm13, xmmword ptr [rbp-0x2C0]
+       vmovups  xmmword ptr [rbp-0x560], xmm13
+       vpermilps xmm13, xmmword ptr [rbp-0x2C0], -86
+       vaddps   xmm13, xmm13, xmmword ptr [rbp-0x560]
+       vinsertps xmm2, xmm2, xmm13, 16
+       vmovss   xmm13, dword ptr [rbp-0x1E0]
+       vinsertps xmm13, xmm14, xmm13, 0
+       vmovups  xmmword ptr [rbp-0x560], xmm13
+       vmovaps  xmm13, xmm11
+       vmovups  xmm4, xmmword ptr [rbp-0x560]
+       vinsertps xmm4, xmm4, xmm13, 16
+       vmovsd   xmm13, qword ptr [rbp-0x1E0]
+       vmovshdup xmm13, xmm13
+       vinsertps xmm4, xmm4, xmm13, 32
+       vmovaps  xmmword ptr [rbp-0x460], xmm4
+       vsubps   xmm13, xmm15, xmm4
+       vinsertps xmm13, xmm13, xmm13, 56
+       vmulps   xmm13, xmm13, xmm1
+       vpermilps xmm4, xmm13, -11
+       vaddps   xmm4, xmm4, xmm13
+       vpermilps xmm13, xmm13, -86
+       vaddps   xmm4, xmm13, xmm4
+       vmulss   xmm4, xmm4, dword ptr [rbp-0x144]
+       vbroadcastss xmm4, xmm4
+       vmulps   xmm4, xmm4, xmmword ptr [rbp-0x430]
+       vaddps   xmm4, xmm4, xmmword ptr [rbp-0x460]
+       vsubps   xmm4, xmm4, xmm15
+       vinsertps xmm4, xmm4, xmm4, 56
+       vmovaps  xmmword ptr [rbp-0x400], xmm4
+       vmovaps  xmm4, xmmword ptr [rbp-0x3C0]
+       vmulps   xmm4, xmm4, xmmword ptr [rbp-0x400]
+       vxorps   xmm13, xmm13, xmm13
+       vmovsd   qword ptr [rbp-0x550], xmm13
+       vpermilps xmm13, xmm4, -11
+       vaddps   xmm13, xmm13, xmm4
+       vpermilps xmm4, xmm4, -86
+       vaddps   xmm4, xmm4, xmm13
+       vmovsd   xmm13, qword ptr [rbp-0x550]
+       vinsertps xmm4, xmm13, xmm4, 14
+       vmovsd   qword ptr [rbp-0x1E8], xmm4
+       vmovaps  xmm13, xmmword ptr [rbp-0x3D0]
+       vmulps   xmm4, xmm13, xmmword ptr [rbp-0x400]
+       vpermilps xmm13, xmm4, -11
+       vaddps   xmm13, xmm13, xmm4
+       vpermilps xmm4, xmm4, -86
+       vaddps   xmm4, xmm4, xmm13
+       vmovsd   xmm13, qword ptr [rbp-0x1E8]
+ 
+G_M000_IG14:                ;; offset=0x0BCF
+       vinsertps xmm4, xmm13, xmm4, 16
+       vmovaps  xmm13, xmm2
+       vsubps   xmm4, xmm4, xmm13
+       vmovsd   qword ptr [rbp-0x1F0], xmm4
+       vmovsd   xmm13, qword ptr [rbp-0x1E0]
+       vsubps   xmm13, xmm13, xmmword ptr [rbp-0x4D0]
+       vmovsd   qword ptr [rbp-0x268], xmm13
+       vmovss   xmm4, dword ptr [rsi]
+       vmovss   dword ptr [rbp-0x2D4], xmm4
+       vmovss   xmm13, dword ptr [rbp-0x1F0]
+       vmovss   dword ptr [rbp-0x544], xmm13
+       vmovss   xmm13, dword ptr [rbp-0x1F0]
+       vmulss   xmm13, xmm13, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x544], xmm13
+       vmovsd   xmm13, qword ptr [rbp-0x1F0]
+       vmovshdup xmm13, xmm13
+       vmovss   dword ptr [rbp-0x4B4], xmm13
+       vmulss   xmm13, xmm13, xmm13
+       vaddss   xmm13, xmm13, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x2C4], xmm13
+       vdivss   xmm13, xmm7, xmm13
+       vmovss   dword ptr [rbp-0x2C8], xmm13
+       vmovaps  xmm13, xmm2
+       vmovss   dword ptr [rbp-0x544], xmm13
+       vmovss   xmm13, dword ptr [rbp-0x1F0]
+       vmulss   xmm13, xmm13, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x544], xmm13
+       vmovshdup xmm13, xmm2
+       vmovss   xmm4, dword ptr [rbp-0x4B4]
+       vmulss   xmm4, xmm13, xmm4
+       vaddss   xmm4, xmm4, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x2CC], xmm4
+       vmovaps  xmm4, xmm2
+       vmulss   xmm2, xmm4, xmm2
+       vmulss   xmm4, xmm13, xmm13
+       vaddss   xmm2, xmm2, xmm4
+       vmovss   xmm4, dword ptr [rbp-0x2D4]
+       vmulss   xmm4, xmm4, xmm4
+       vmovss   dword ptr [rbp-0x3D4], xmm4
+       vsubss   xmm2, xmm2, xmm4
+       vmovss   dword ptr [rbp-0x2D0], xmm2
+       vmovss   xmm13, dword ptr [rbp-0x2CC]
+       vmulss   xmm13, xmm13, xmm13
+       vmovss   xmm2, dword ptr [rbp-0x2C4]
+       vmulss   xmm2, xmm2, dword ptr [rbp-0x2D0]
+       vsubss   xmm2, xmm13, xmm2
+       vxorps   xmm13, xmm13, xmm13
+       vmaxss   xmm2, xmm13, xmm2
+       vsqrtss  xmm2, xmm2, xmm2
+       vmulss   xmm2, xmm2, dword ptr [rbp-0x2C8]
+       vmovss   dword ptr [rbp-0x2D8], xmm2
+       vmovss   xmm2, dword ptr [rbp-0x2CC]
+       vxorps   xmm2, xmm2, xmmword ptr [reloc @RWD16]
+       vmulss   xmm2, xmm2, dword ptr [rbp-0x2C8]
+       vsubss   xmm13, xmm2, dword ptr [rbp-0x2D8]
+       vmovss   dword ptr [rbp-0x1F4], xmm13
+       vaddss   xmm4, xmm2, dword ptr [rbp-0x2D8]
+       vmovss   dword ptr [rbp-0x1F8], xmm4
+       vmovss   xmm13, dword ptr [rbp-0x2C4]
+       vandps   xmm13, xmm13, xmmword ptr [reloc @RWD48]
+ 
+G_M000_IG15:                ;; offset=0x0D64
+       vbroadcastss xmm4, xmm13
+       vcmpltps xmm4, xmm4, xmmword ptr [reloc @RWD80]
+       vmovaps  xmmword ptr [rbp-0x470], xmm2
+       vandps   xmm13, xmm2, xmm4
+       vmovss   xmm2, dword ptr [rbp-0x1F4]
+       vandnps  xmm2, xmm4, xmm2
+       vorps    xmm13, xmm2, xmm13
+       vmovss   dword ptr [rbp-0x1F4], xmm13
+       vmovaps  xmm2, xmmword ptr [rbp-0x470]
+       vandps   xmm2, xmm2, xmm4
+       vmovss   xmm13, dword ptr [rbp-0x1F8]
+       vandnps  xmm4, xmm4, xmm13
+       vorps    xmm4, xmm4, xmm2
+       vmovss   xmm2, dword ptr [rbp-0x1F4]
+       vxorps   xmm13, xmm13, xmm13
+       vmaxss   xmm2, xmm2, xmm13
+       vmovss   dword ptr [rbp-0x1FC], xmm2
+       vminss   xmm4, xmm4, dword ptr [rbp-0x4B0]
+       vmovss   dword ptr [rbp-0x200], xmm4
+       vmovsd   xmm4, qword ptr [rbp-0x268]
+       vbroadcastss xmm2, xmm2
+       vmulps   xmm2, xmm2, xmm4
+       vaddps   xmm2, xmm2, xmmword ptr [rbp-0x4D0]
+       vmovsd   xmm4, qword ptr [rbp-0x268]
+       vmovups  xmmword ptr [rbp-0x560], xmm4
+       vbroadcastss xmm4, dword ptr [rbp-0x200]
+       vmulps   xmm4, xmm4, xmmword ptr [rbp-0x560]
+       vaddps   xmm4, xmm4, xmmword ptr [rbp-0x4D0]
+       vmovss   xmm13, dword ptr [rbp-0x498]
+       vmulss   xmm13, xmm13, dword ptr [rbp-0x498]
+       vsubss   xmm13, xmm13, dword ptr [rbp-0x3D4]
+       vmulss   xmm13, xmm13, dword ptr [rbp-0x1D0]
+       vaddss   xmm13, xmm13, dword ptr [rbp-0x1CC]
+       vmulss   xmm13, xmm13, dword ptr [reloc @RWD96]
+       vmovss   dword ptr [rbp-0x204], xmm13
+       vmovss   xmm13, dword ptr [rbp-0x1CC]
+       vmovups  xmmword ptr [rbp-0x560], xmm13
+       vxorps   xmm13, xmm13, xmm13
+       vmaxss   xmm13, xmm13, dword ptr [rbp-0x204]
+       vmovss   dword ptr [rbp-0x544], xmm13
+       vmovups  xmm13, xmmword ptr [rbp-0x560]
+       vminss   xmm13, xmm13, dword ptr [rbp-0x544]
+       vbroadcastss xmm13, xmm13
+       vmovups  xmmword ptr [rbp-0x560], xmm13
+       vmovaps  xmm13, xmm3
+       vmovups  xmmword ptr [rbp-0x570], xmm13
+       vmovups  xmm13, xmmword ptr [rbp-0x560]
+       vmulps   xmm13, xmm13, xmmword ptr [rbp-0x570]
+       vxorps   xmm1, xmm1, xmm1
+       vmovsd   qword ptr [rbp-0x550], xmm1
+       vmovshdup xmm1, xmm3
+       vmovsd   xmm9, qword ptr [rbp-0x550]
+       vinsertps xmm1, xmm9, xmm1, 14
+       vmovsd   qword ptr [rbp-0x550], xmm1
+       vmovaps  xmm9, xmm3
+       vxorps   xmm1, xmm9, xmmword ptr [reloc @RWD16]
+       vmovsd   xmm9, qword ptr [rbp-0x550]
+       vinsertps xmm1, xmm9, xmm1, 16
+       vmovaps  xmm9, xmm13
+       vmovups  xmmword ptr [rbp-0x570], xmm9
+       vmovaps  xmm9, xmm1
+ 
+G_M000_IG16:                ;; offset=0x0F07
+       vaddps   xmm9, xmm9, xmmword ptr [rbp-0x570]
+       vmovsd   qword ptr [rbp-0x210], xmm9
+       vmovaps  xmm9, xmm13
+       vinsertps xmm9, xmm14, xmm9, 0
+       vmovups  xmmword ptr [rbp-0x570], xmm9
+       vmovaps  xmm9, xmm11
+       vmovups  xmm12, xmmword ptr [rbp-0x570]
+       vinsertps xmm9, xmm12, xmm9, 16
+       vmovshdup xmm12, xmm13
+       vinsertps xmm9, xmm9, xmm12, 32
+       vmovaps  xmmword ptr [rbp-0x480], xmm9
+       vsubps   xmm12, xmm15, xmm9
+       vinsertps xmm12, xmm12, xmm12, 56
+       vmulps   xmm12, xmm12, xmmword ptr [rbp-0x3B0]
+       vpermilps xmm9, xmm12, -11
+       vaddps   xmm9, xmm9, xmm12
+       vpermilps xmm12, xmm12, -86
+       vaddps   xmm9, xmm12, xmm9
+       vmulss   xmm9, xmm9, dword ptr [rbp-0x144]
+       vbroadcastss xmm9, xmm9
+       vmulps   xmm9, xmm9, xmmword ptr [rbp-0x430]
+       vaddps   xmm9, xmm9, xmmword ptr [rbp-0x480]
+       vsubps   xmm9, xmm9, xmm15
+       vinsertps xmm9, xmm9, xmm9, 56
+       vmovaps  xmmword ptr [rbp-0x410], xmm9
+       vmovaps  xmm9, xmmword ptr [rbp-0x3C0]
+       vmulps   xmm9, xmm9, xmmword ptr [rbp-0x410]
+       vxorps   xmm12, xmm12, xmm12
+       vmovsd   qword ptr [rbp-0x550], xmm12
+       vpermilps xmm12, xmm9, -11
+       vaddps   xmm12, xmm12, xmm9
+       vpermilps xmm9, xmm9, -86
+       vaddps   xmm9, xmm9, xmm12
+       vmovsd   xmm12, qword ptr [rbp-0x550]
+       vinsertps xmm9, xmm12, xmm9, 14
+       vmovaps  xmm12, xmmword ptr [rbp-0x3D0]
+       vmulps   xmm12, xmm12, xmmword ptr [rbp-0x410]
+       vmovaps  xmmword ptr [rbp-0x2F0], xmm12
+       vpermilps xmm12, xmm12, -11
+       vaddps   xmm12, xmm12, xmmword ptr [rbp-0x2F0]
+       vmovups  xmmword ptr [rbp-0x570], xmm12
+       vpermilps xmm12, xmmword ptr [rbp-0x2F0], -86
+       vaddps   xmm12, xmm12, xmmword ptr [rbp-0x570]
+       vinsertps xmm9, xmm9, xmm12, 16
+       vmovsd   qword ptr [rbp-0x218], xmm9
+       vmovss   xmm12, dword ptr [rbp-0x210]
+       vinsertps xmm12, xmm14, xmm12, 0
+       vmovups  xmmword ptr [rbp-0x570], xmm12
+       vmovaps  xmm12, xmm11
+       vmovups  xmm9, xmmword ptr [rbp-0x570]
+       vinsertps xmm9, xmm9, xmm12, 16
+       vmovsd   xmm12, qword ptr [rbp-0x210]
+       vmovshdup xmm12, xmm12
+       vinsertps xmm9, xmm9, xmm12, 32
+       vmovaps  xmmword ptr [rbp-0x490], xmm9
+       vsubps   xmm12, xmm15, xmm9
+       vinsertps xmm12, xmm12, xmm12, 56
+       vmulps   xmm12, xmm12, xmmword ptr [rbp-0x3B0]
+ 
+G_M000_IG17:                ;; offset=0x108F
+       vpermilps xmm9, xmm12, -11
+       vaddps   xmm9, xmm9, xmm12
+       vpermilps xmm12, xmm12, -86
+       vaddps   xmm9, xmm12, xmm9
+       vmulss   xmm9, xmm9, dword ptr [rbp-0x144]
+       vbroadcastss xmm9, xmm9
+       vmulps   xmm9, xmm9, xmmword ptr [rbp-0x430]
+       vaddps   xmm9, xmm9, xmmword ptr [rbp-0x490]
+       vsubps   xmm15, xmm9, xmm15
+       vinsertps xmm9, xmm15, xmm15, 56
+       vmovaps  xmmword ptr [rbp-0x420], xmm9
+       vmovaps  xmm15, xmmword ptr [rbp-0x3C0]
+       vmulps   xmm15, xmm15, xmm9
+       vxorps   xmm9, xmm9, xmm9
+       vpermilps xmm12, xmm15, -11
+       vaddps   xmm12, xmm12, xmm15
+       vpermilps xmm15, xmm15, -86
+       vaddps   xmm12, xmm15, xmm12
+       vinsertps xmm9, xmm9, xmm12, 14
+       vmovaps  xmm12, xmmword ptr [rbp-0x3D0]
+       vmulps   xmm12, xmm12, xmmword ptr [rbp-0x420]
+       vpermilps xmm15, xmm12, -11
+       vaddps   xmm15, xmm15, xmm12
+       vpermilps xmm12, xmm12, -86
+       vaddps   xmm12, xmm12, xmm15
+       vinsertps xmm9, xmm9, xmm12, 16
+       vmovsd   xmm12, qword ptr [rbp-0x218]
+       vmovaps  xmm15, xmm12
+       vsubps   xmm9, xmm9, xmm15
+       vmovaps  xmm15, xmm9
+       vmovss   dword ptr [rbp-0x544], xmm15
+       vmovaps  xmm15, xmm9
+       vmulss   xmm15, xmm15, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x544], xmm15
+       vmovshdup xmm15, xmm9
+       vmovss   dword ptr [rbp-0x4B8], xmm15
+       vmulss   xmm15, xmm15, xmm15
+       vaddss   xmm15, xmm15, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x2F4], xmm15
+       vdivss   xmm15, xmm7, xmm15
+       vmovss   dword ptr [rbp-0x2F8], xmm15
+       vmovaps  xmm15, xmm12
+       vmulss   xmm9, xmm15, xmm9
+       vmovss   dword ptr [rbp-0x544], xmm9
+       vmovshdup xmm15, xmm12
+       vmovss   xmm9, dword ptr [rbp-0x4B8]
+       vmulss   xmm9, xmm15, xmm9
+       vaddss   xmm9, xmm9, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x2FC], xmm9
+       vmovaps  xmm9, xmm12
+       vmulss   xmm9, xmm9, xmm12
+       vmulss   xmm12, xmm15, xmm15
+       vaddss   xmm9, xmm9, xmm12
+       vsubss   xmm9, xmm9, dword ptr [rbp-0x3D4]
+       vmovss   xmm12, dword ptr [rbp-0x2FC]
+       vmulss   xmm15, xmm12, xmm12
+       vmovss   xmm12, dword ptr [rbp-0x2F4]
+       vmulss   xmm9, xmm12, xmm9
+       vsubss   xmm9, xmm15, xmm9
+       vxorps   xmm15, xmm15, xmm15
+       vmaxss   xmm9, xmm15, xmm9
+ 
+G_M000_IG18:                ;; offset=0x120B
+       vsqrtss  xmm9, xmm9, xmm9
+       vmulss   xmm9, xmm9, dword ptr [rbp-0x2F8]
+       vmovss   xmm12, dword ptr [rbp-0x2FC]
+       vxorps   xmm12, xmm12, xmmword ptr [reloc @RWD16]
+       vmulss   xmm12, xmm12, dword ptr [rbp-0x2F8]
+       vsubss   xmm15, xmm12, xmm9
+       vmovss   dword ptr [rbp-0x21C], xmm15
+       vaddss   xmm9, xmm12, xmm9
+       vmovss   dword ptr [rbp-0x220], xmm9
+       vmovss   xmm15, dword ptr [rbp-0x2F4]
+       vandps   xmm15, xmm15, xmmword ptr [reloc @RWD48]
+       vbroadcastss xmm9, xmm15
+       vcmpltps xmm9, xmm9, xmmword ptr [reloc @RWD80]
+       vmovaps  xmm15, xmm12
+       vandps   xmm15, xmm15, xmm9
+       vmovups  xmmword ptr [rbp-0x570], xmm15
+       vmovss   xmm15, dword ptr [rbp-0x21C]
+       vandnps  xmm15, xmm9, xmm15
+       vorps    xmm15, xmm15, xmmword ptr [rbp-0x570]
+       vmovss   dword ptr [rbp-0x21C], xmm15
+       vandps   xmm12, xmm12, xmm9
+       vmovss   xmm15, dword ptr [rbp-0x220]
+       vandnps  xmm9, xmm9, xmm15
+       vorps    xmm9, xmm9, xmm12
+       vmovss   dword ptr [rbp-0x220], xmm9
+       vmovss   xmm15, dword ptr [rbp-0x498]
+       vmovaps  xmm12, xmm1
+       vmovaps  xmm9, xmm1
+       vmulss   xmm9, xmm12, xmm9
+       vmovss   dword ptr [rbp-0x544], xmm9
+       vmovshdup xmm12, xmm1
+       vmovshdup xmm9, xmm1
+       vmulss   xmm9, xmm12, xmm9
+       vaddss   xmm9, xmm9, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x300], xmm9
+       vdivss   xmm12, xmm7, xmm9
+       vmovss   dword ptr [rbp-0x304], xmm12
+       vmovaps  xmm12, xmm13
+       vmovaps  xmm9, xmm1
+       vmulss   xmm9, xmm12, xmm9
+       vmovss   dword ptr [rbp-0x544], xmm9
+       vmovshdup xmm12, xmm13
+       vmovshdup xmm9, xmm1
+       vmulss   xmm9, xmm12, xmm9
+       vaddss   xmm9, xmm9, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x308], xmm9
+       vmovaps  xmm12, xmm13
+       vmovaps  xmm9, xmm13
+       vmulss   xmm9, xmm12, xmm9
+       vmovss   dword ptr [rbp-0x544], xmm9
+       vmovshdup xmm12, xmm13
+       vmovshdup xmm9, xmm13
+       vmulss   xmm9, xmm12, xmm9
+       vaddss   xmm9, xmm9, dword ptr [rbp-0x544]
+       vmulss   xmm12, xmm15, xmm15
+       vsubss   xmm9, xmm9, xmm12
+       vmovss   xmm12, dword ptr [rbp-0x308]
+       vmulss   xmm15, xmm12, xmm12
+       vmovss   xmm12, dword ptr [rbp-0x300]
+       vmulss   xmm9, xmm12, xmm9
+       vsubss   xmm9, xmm15, xmm9
+       vxorps   xmm15, xmm15, xmm15
+       vmaxss   xmm9, xmm15, xmm9
+ 
+G_M000_IG19:                ;; offset=0x1392
+       vsqrtss  xmm9, xmm9, xmm9
+       vmulss   xmm9, xmm9, dword ptr [rbp-0x304]
+       vmovss   xmm12, dword ptr [rbp-0x308]
+       vxorps   xmm12, xmm12, xmmword ptr [reloc @RWD16]
+       vmulss   xmm12, xmm12, dword ptr [rbp-0x304]
+       vsubss   xmm15, xmm12, xmm9
+       vmovss   dword ptr [rbp-0x224], xmm15
+       vaddss   xmm9, xmm12, xmm9
+       vmovss   dword ptr [rbp-0x228], xmm9
+       vmovss   xmm15, dword ptr [rbp-0x300]
+       vandps   xmm15, xmm15, xmmword ptr [reloc @RWD48]
+       vbroadcastss xmm9, xmm15
+       vcmpltps xmm9, xmm9, xmmword ptr [reloc @RWD80]
+       vmovaps  xmm15, xmm12
+       vandps   xmm15, xmm15, xmm9
+       vmovups  xmmword ptr [rbp-0x570], xmm15
+       vmovss   xmm15, dword ptr [rbp-0x224]
+       vandnps  xmm15, xmm9, xmm15
+       vorps    xmm15, xmm15, xmmword ptr [rbp-0x570]
+       vmovss   dword ptr [rbp-0x224], xmm15
+       vandps   xmm12, xmm12, xmm9
+       vmovss   xmm15, dword ptr [rbp-0x228]
+       vandnps  xmm9, xmm9, xmm15
+       vorps    xmm9, xmm9, xmm12
+       vmovss   xmm12, dword ptr [rbp-0x21C]
+       vmaxss   xmm12, xmm12, dword ptr [rbp-0x224]
+       vmovss   dword ptr [rbp-0x22C], xmm12
+       vmovss   xmm15, dword ptr [rbp-0x220]
+       vminss   xmm9, xmm15, xmm9
+       vmovss   dword ptr [rbp-0x230], xmm9
+       vmovaps  xmm15, xmm1
+       vbroadcastss xmm12, xmm12
+       vmulps   xmm12, xmm12, xmm15
+       vmovaps  xmm15, xmm1
+       vbroadcastss xmm9, xmm9
+       vmulps   xmm9, xmm9, xmm15
+       vmovaps  xmm15, xmm13
+       vaddps   xmm12, xmm12, xmm15
+       vmovaps  xmm15, xmm13
+       vaddps   xmm9, xmm9, xmm15
+       vmovss   xmm15, dword ptr [rbp-0x1C4]
+       vsubss   xmm15, xmm15, dword ptr [rbp-0x494]
+       vmulss   xmm15, xmm15, dword ptr [reloc @RWD100]
+       vmovss   dword ptr [rbp-0x544], xmm15
+       vmovaps  xmm15, xmmword ptr [rbp-0x4B0]
+       vminss   xmm15, xmm15, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x544], xmm15
+       vxorps   xmm15, xmm15, xmm15
+       vmaxss   xmm15, xmm15, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x544], xmm15
+       vmovss   xmm15, dword ptr [rbp-0x1C8]
+       vsubss   xmm15, xmm15, dword ptr [rbp-0x494]
+       vmulss   xmm15, xmm15, dword ptr [reloc @RWD100]
+       vmovss   dword ptr [rbp-0x548], xmm15
+       vmovaps  xmm15, xmmword ptr [rbp-0x4B0]
+       vminss   xmm15, xmm15, dword ptr [rbp-0x548]
+       vmovss   dword ptr [rbp-0x548], xmm15
+       vxorps   xmm15, xmm15, xmm15
+       vmaxss   xmm15, xmm15, dword ptr [rbp-0x548]
+       vmulss   xmm15, xmm15, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x234], xmm15
+ 
+G_M000_IG20:                ;; offset=0x1534
+       vsubss   xmm15, xmm7, xmm15
+       vmovss   dword ptr [rbp-0x238], xmm15
+       vmovaps  xmm15, xmm5
+       vsubps   xmm13, xmm15, xmm13
+       vmovaps  xmm15, xmm1
+       vmovss   dword ptr [rbp-0x544], xmm15
+       vmovaps  xmm15, xmm13
+       vmulss   xmm15, xmm15, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x544], xmm15
+       vmovshdup xmm1, xmm1
+       vmovshdup xmm15, xmm13
+       vmulss   xmm1, xmm1, xmm15
+       vaddss   xmm1, xmm1, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x23C], xmm1
+       vmovaps  xmm15, xmm3
+       vmovaps  xmm1, xmm13
+       vmulss   xmm1, xmm15, xmm1
+       vmovshdup xmm3, xmm3
+       vmovshdup xmm13, xmm13
+       vmulss   xmm3, xmm3, xmm13
+       vaddss   xmm1, xmm1, xmm3
+       vandps   xmm3, xmm1, xmmword ptr [reloc @RWD48]
+       vmovss   xmm15, dword ptr [rbp-0x23C]
+       vandps   xmm13, xmm15, xmmword ptr [reloc @RWD48]
+       vucomiss xmm3, xmm13
+       seta     dl
+       movzx    rdx, dl
+       vxorps   xmm3, xmm3, xmm3
+       vucomiss xmm1, xmm3
+       seta     r8b
+       movzx    r8, r8b
+       and      r8d, edx
+       vucomiss xmm3, xmm1
+       setae    r10b
+       movzx    r10, r10b
+       and      r10d, edx
+       vucomiss xmm3, xmm15
+       seta     r9b
+       movzx    r9, r9b
+       test     edx, edx
+       sete     r11b
+       movzx    r11, r11b
+       and      r9d, r11d
+       vucomiss xmm15, xmm3
+       setae    r11b
+       movzx    r11, r11b
+       test     edx, edx
+       sete     dl
+       movzx    rdx, dl
+       and      edx, r11d
+       vmovaps  xmm1, xmm5
+       vmovss   xmm15, dword ptr [rbp-0x238]
+       vmulss   xmm1, xmm1, xmm15
+       vmovaps  xmm3, xmm2
+       vmovss   xmm13, dword ptr [rbp-0x234]
+       vmulss   xmm3, xmm3, xmm13
+       vaddss   xmm1, xmm1, xmm3
+       vmovaps  xmm3, xmm2
+       vmovss   dword ptr [rbp-0x30C], xmm3
+       mov      r11d, -1
+       xor      r14d, r14d
+       test     r8d, r8d
+       cmove    r11d, r14d
+       vmovd    xmm3, r11d
+       vandps   xmm1, xmm1, xmm3
+       vmovups  xmmword ptr [rbp-0x570], xmm1
+       vmovss   xmm1, dword ptr [rbp-0x30C]
+       vandnps  xmm1, xmm3, xmm1
+       vorps    xmm1, xmm1, xmmword ptr [rbp-0x570]
+       vinsertps xmm2, xmm2, xmm1, 0
+       vmovshdup xmm1, xmm5
+       vmulss   xmm1, xmm1, xmm15
+       vmovshdup xmm3, xmm2
+ 
+G_M000_IG21:                ;; offset=0x1698
+       vmulss   xmm3, xmm3, xmm13
+       vaddss   xmm1, xmm1, xmm3
+       vmovshdup xmm3, xmm2
+       vmovss   dword ptr [rbp-0x310], xmm3
+       mov      r11d, -1
+ 
+G_M000_IG22:                ;; offset=0x16B3
+       test     r8d, r8d
+       cmove    r11d, r14d
+       vmovd    xmm3, r11d
+       vandps   xmm1, xmm1, xmm3
+       vmovups  xmmword ptr [rbp-0x570], xmm1
+       vmovss   xmm1, dword ptr [rbp-0x310]
+       vandnps  xmm1, xmm3, xmm1
+       vorps    xmm1, xmm1, xmmword ptr [rbp-0x570]
+       vinsertps xmm2, xmm2, xmm1, 16
+       vmovaps  xmm1, xmm5
+       vmulss   xmm1, xmm1, xmm15
+       vmovaps  xmm3, xmm4
+       vmulss   xmm3, xmm3, xmm13
+       vaddss   xmm1, xmm1, xmm3
+       vmovaps  xmm3, xmm4
+       vmovss   dword ptr [rbp-0x314], xmm3
+       mov      r8d, -1
+ 
+G_M000_IG23:                ;; offset=0x170D
+       test     r10d, r10d
+       cmove    r8d, r14d
+       vmovd    xmm3, r8d
+       vandps   xmm1, xmm1, xmm3
+       vmovups  xmmword ptr [rbp-0x570], xmm1
+       vmovss   xmm1, dword ptr [rbp-0x314]
+       vandnps  xmm1, xmm3, xmm1
+       vorps    xmm1, xmm1, xmmword ptr [rbp-0x570]
+       vinsertps xmm4, xmm4, xmm1, 0
+       vmovshdup xmm1, xmm5
+       vmulss   xmm1, xmm1, xmm15
+       vmovshdup xmm3, xmm4
+       vmulss   xmm3, xmm3, xmm13
+       vaddss   xmm1, xmm1, xmm3
+       vmovshdup xmm3, xmm4
+       vmovss   dword ptr [rbp-0x318], xmm3
+       mov      r8d, -1
+ 
+G_M000_IG24:                ;; offset=0x1767
+       test     r10d, r10d
+       cmove    r8d, r14d
+       vmovd    xmm3, r8d
+       vandps   xmm1, xmm1, xmm3
+       vmovups  xmmword ptr [rbp-0x570], xmm1
+       vmovss   xmm1, dword ptr [rbp-0x318]
+       vandnps  xmm1, xmm3, xmm1
+       vorps    xmm1, xmm1, xmmword ptr [rbp-0x570]
+       vinsertps xmm4, xmm4, xmm1, 16
+       vmovaps  xmm1, xmm5
+       vmulss   xmm1, xmm1, xmm15
+       vmovaps  xmm3, xmm12
+       vmulss   xmm3, xmm3, xmm13
+       vaddss   xmm1, xmm1, xmm3
+       vmovaps  xmm3, xmm12
+       vmovss   dword ptr [rbp-0x31C], xmm3
+       mov      r8d, -1
+ 
+G_M000_IG25:                ;; offset=0x17C3
+       test     r9d, r9d
+       cmove    r8d, r14d
+       vmovd    xmm3, r8d
+       vandps   xmm1, xmm1, xmm3
+       vmovups  xmmword ptr [rbp-0x570], xmm1
+       vmovss   xmm1, dword ptr [rbp-0x31C]
+       vandnps  xmm1, xmm3, xmm1
+       vorps    xmm1, xmm1, xmmword ptr [rbp-0x570]
+       vinsertps xmm12, xmm12, xmm1, 0
+       vmovshdup xmm1, xmm5
+       vmulss   xmm1, xmm1, xmm15
+       vmovshdup xmm3, xmm12
+       vmulss   xmm3, xmm3, xmm13
+       vaddss   xmm1, xmm1, xmm3
+       vmovshdup xmm3, xmm12
+       vmovss   dword ptr [rbp-0x320], xmm3
+       mov      r8d, -1
+ 
+G_M000_IG26:                ;; offset=0x181F
+       test     r9d, r9d
+       cmove    r8d, r14d
+       vmovd    xmm3, r8d
+       vandps   xmm1, xmm1, xmm3
+       vmovups  xmmword ptr [rbp-0x570], xmm1
+       vmovss   xmm1, dword ptr [rbp-0x320]
+       vandnps  xmm1, xmm3, xmm1
+       vorps    xmm1, xmm1, xmmword ptr [rbp-0x570]
+       vinsertps xmm12, xmm12, xmm1, 16
+       vmovaps  xmm1, xmm5
+       vmulss   xmm1, xmm1, xmm15
+       vmovaps  xmm3, xmm9
+       vmulss   xmm3, xmm3, xmm13
+       vaddss   xmm1, xmm1, xmm3
+       vmovaps  xmm3, xmm9
+       vmovss   dword ptr [rbp-0x324], xmm3
+       mov      r8d, -1
+ 
+G_M000_IG27:                ;; offset=0x187B
+       test     edx, edx
+       cmove    r8d, r14d
+       vmovd    xmm3, r8d
+       vandps   xmm1, xmm1, xmm3
+       vmovups  xmmword ptr [rbp-0x570], xmm1
+       vmovss   xmm1, dword ptr [rbp-0x324]
+       vandnps  xmm1, xmm3, xmm1
+       vorps    xmm1, xmm1, xmmword ptr [rbp-0x570]
+       vinsertps xmm9, xmm9, xmm1, 0
+       vmovshdup xmm1, xmm5
+       vmulss   xmm1, xmm1, xmm15
+       vmovshdup xmm3, xmm9
+       vmulss   xmm3, xmm3, xmm13
+       vaddss   xmm1, xmm1, xmm3
+       vmovshdup xmm3, xmm9
+       mov      r8d, -1
+ 
+G_M000_IG28:                ;; offset=0x18CE
+       test     edx, edx
+       cmove    r8d, r14d
+       vmovd    xmm13, r8d
+       vandps   xmm1, xmm1, xmm13
+       vandnps  xmm3, xmm13, xmm3
+       vorps    xmm1, xmm3, xmm1
+       vinsertps xmm9, xmm9, xmm1, 16
+       vmovaps  xmm1, xmm4
+       vinsertps xmm1, xmm14, xmm1, 0
+       vmovaps  xmm3, xmm11
+       vinsertps xmm1, xmm1, xmm3, 16
+       vmovshdup xmm3, xmm4
+       vinsertps xmm15, xmm1, xmm3, 32
+       vmovaps  xmm1, xmm12
+       vinsertps xmm1, xmm14, xmm1, 0
+       vmovaps  xmm3, xmm11
+       vinsertps xmm1, xmm1, xmm3, 16
+       vmovshdup xmm3, xmm12
+       vinsertps xmm1, xmm1, xmm3, 32
+       vmovaps  xmmword ptr [rbp-0x170], xmm1
+       vmovaps  xmm3, xmm9
+       vinsertps xmm3, xmm14, xmm3, 0
+       vmovaps  xmm4, xmm11
+       vinsertps xmm3, xmm3, xmm4, 16
+       vmovshdup xmm4, xmm9
+       vinsertps xmm3, xmm3, xmm4, 32
+       vmovss   xmm4, dword ptr [rbp-0x200]
+       vucomiss xmm4, dword ptr [rbp-0x1FC]
+       seta     dl
+       mov      byte  ptr [rbx+0x5D], dl
+       movzx    rdx, byte  ptr [rbx+0x5D]
+       mov      byte  ptr [rbx+0x5E], dl
+       movzx    rdx, byte  ptr [rbx+0x5D]
+       vmovss   xmm9, dword ptr [rbp-0x230]
+       vucomiss xmm9, dword ptr [rbp-0x22C]
+       seta     r8b
+       movzx    r8, r8b
+       and      edx, r8d
+       mov      byte  ptr [rbx+0x5F], dl
+       vmovsd   qword ptr [rbp-0x180], xmm3
+       vextractps dword ptr [rbp-0x178], xmm3, 2
+       vmovaps  xmm13, xmm2
+       vmovss   xmm4, dword ptr [rbp-0x144]
+ 
+G_M000_IG29:                ;; offset=0x19B2
+       vmovaps  xmm2, xmm13
+       vinsertps xmm2, xmm14, xmm2, 0
+       vmovaps  xmm14, xmm11
+       vinsertps xmm2, xmm2, xmm14, 16
+       vmovshdup xmm13, xmm13
+       vinsertps xmm14, xmm2, xmm13, 32
+       mov      byte  ptr [rbx+0x5C], 1
+ 
+G_M000_IG30:                ;; offset=0x19D7
+       vmovups  xmm2, xmmword ptr [rbp-0xE8]
+       vinsertps xmm2, xmm2, xmm2, 56
+       vmovaps  xmm1, xmmword ptr [rbp-0x120]
+       vinsertps xmm1, xmm1, xmm1, 56
+       vmulps   xmm1, xmm1, xmm2
+       vpermilps xmm2, xmm1, -11
+       vaddps   xmm2, xmm2, xmm1
+       vpermilps xmm1, xmm1, -86
+       vaddps   xmm1, xmm1, xmm2
+       vmovaps  xmm2, xmmword ptr [rbp-0xD0]
+       vinsertps xmm2, xmm2, xmm2, 56
+       vmovaps  xmm13, xmmword ptr [rbp-0x120]
+       vinsertps xmm13, xmm13, xmm13, 56
+       vmulps   xmm2, xmm13, xmm2
+       vpermilps xmm13, xmm2, -11
+       vaddps   xmm13, xmm13, xmm2
+       vpermilps xmm2, xmm2, -86
+       vaddps   xmm2, xmm2, xmm13
+       vmulss   xmm13, xmm1, xmm1
+       vmulss   xmm4, xmm2, xmm2
+       vaddss   xmm4, xmm13, xmm4
+       vsqrtss  xmm4, xmm4, xmm4
+       vdivss   xmm4, xmm7, xmm4
+       vmulss   xmm1, xmm1, xmm4
+       vbroadcastss xmm1, xmm1
+       vmovups  xmm13, xmmword ptr [rbp-0xE8]
+       vmulps   xmm1, xmm1, xmm13
+       vmulss   xmm2, xmm2, xmm4
+       vbroadcastss xmm2, xmm2
+       vmovaps  xmm4, xmmword ptr [rbp-0xD0]
+       vmulps   xmm2, xmm2, xmm4
+       vaddps   xmm1, xmm2, xmm1
+       vmovaps  xmmword ptr [rbp-0x1C0], xmm1
+       vxorps   xmm2, xmm2, xmm2
+       vmovaps  xmm3, xmmword ptr [rbp-0x190]
+       vmovaps  xmm4, xmm3
+       vaddss   xmm4, xmm4, dword ptr [rbp-0x110]
+       vinsertps xmm2, xmm2, xmm4, 14
+       vmovshdup xmm4, xmm3
+       vaddss   xmm4, xmm4, dword ptr [rbp-0x10C]
+       vinsertps xmm2, xmm2, xmm4, 16
+       vunpckhps xmm3, xmm3, xmm3
+       vaddss   xmm3, xmm3, dword ptr [rbp-0x108]
+       vinsertps xmm2, xmm2, xmm3, 32
+       vxorps   xmm3, xmm3, xmm3
+       vmovaps  xmm4, xmm5
+       vinsertps xmm3, xmm3, xmm4, 14
+       vmovshdup xmm4, xmm5
+       vinsertps xmm3, xmm3, xmm4, 32
+       cmp      eax, ecx
+       je       G_M000_IG47
+       vmovaps  xmm0, xmm2
+       vmovups  xmm4, xmmword ptr [rbp-0xDC]
+       vaddps   xmm0, xmm4, xmm0
+       vxorps   xmm4, xmm4, xmm4
+       vmovaps  xmm12, xmm3
+       vinsertps xmm4, xmm4, xmm12, 14
+       vmovaps  xmm12, xmm7
+ 
+G_M000_IG31:                ;; offset=0x1B0F
+       vinsertps xmm4, xmm4, xmm12, 16
+       vunpckhps xmm12, xmm3, xmm3
+       vinsertps xmm4, xmm4, xmm12, 32
+       vmovaps  xmmword ptr [rbp-0x250], xmm4
+       vmovaps  xmm13, xmmword ptr [rbp-0x160]
+       vmovaps  xmm12, xmm13
+       vmovaps  xmm13, xmm3
+       vsubps   xmm13, xmm12, xmm13
+       vinsertps xmm13, xmm13, xmm13, 56
+       vmovups  xmm1, xmmword ptr [rbp-0xDC]
+       vinsertps xmm1, xmm1, xmm1, 56
+       vmulps   xmm1, xmm1, xmm13
+       vpermilps xmm13, xmm1, -11
+       vaddps   xmm13, xmm13, xmm1
+       vpermilps xmm1, xmm1, -86
+       vaddps   xmm1, xmm1, xmm13
+       vmovss   xmm13, dword ptr [rbp-0x144]
+       vmulss   xmm1, xmm1, xmm13
+       vbroadcastss xmm1, xmm1
+       vmovaps  xmm4, xmmword ptr [rbp-0x120]
+       vmulps   xmm1, xmm1, xmm4
+       vmovaps  xmm4, xmm3
+       vaddps   xmm1, xmm1, xmm4
+       vsubps   xmm1, xmm1, xmm12
+       vmovaps  xmmword ptr [rbp-0x340], xmm1
+       vmovaps  xmm4, xmm1
+       vinsertps xmm4, xmm4, xmm4, 56
+       vmovups  xmm1, xmmword ptr [rbp-0xE8]
+       vinsertps xmm1, xmm1, xmm1, 56
+       vmulps   xmm1, xmm1, xmm4
+       vpermilps xmm4, xmm1, -11
+       vaddps   xmm4, xmm4, xmm1
+       vpermilps xmm1, xmm1, -86
+       vaddps   xmm1, xmm1, xmm4
+       vmovss   dword ptr [rbp-0x378], xmm1
+       vmovaps  xmm4, xmmword ptr [rbp-0x340]
+       vinsertps xmm4, xmm4, xmm4, 56
+       vmovaps  xmm1, xmmword ptr [rbp-0xD0]
+       vinsertps xmm1, xmm1, xmm1, 56
+       vmulps   xmm1, xmm1, xmm4
+       vpermilps xmm4, xmm1, -11
+       vaddps   xmm4, xmm4, xmm1
+       vpermilps xmm1, xmm1, -86
+       vaddps   xmm1, xmm1, xmm4
+       vmovss   dword ptr [rbp-0x37C], xmm1
+       vmovshdup xmm4, xmm2
+       vsubss   xmm4, xmm4, xmm11
+       vmulss   xmm4, xmm4, dword ptr [rbp-0x148]
+       vmovss   dword ptr [rbp-0x344], xmm4
+       vmulss   xmm1, xmm4, dword ptr [rbp-0x120]
+       vmovaps  xmm4, xmm2
+       vsubss   xmm1, xmm4, xmm1
+       vmovss   dword ptr [rbp-0x380], xmm1
+       vmovss   xmm4, dword ptr [rbp-0x344]
+       vmulss   xmm4, xmm4, dword ptr [rbp-0x118]
+       vunpckhps xmm1, xmm2, xmm2
+       vsubss   xmm1, xmm1, xmm4
+       vmovss   dword ptr [rbp-0x384], xmm1
+ 
+G_M000_IG32:                ;; offset=0x1C63
+       vmovaps  xmm4, xmmword ptr [rbp-0x250]
+       vsubps   xmm4, xmm12, xmm4
+       vinsertps xmm4, xmm4, xmm4, 56
+       vmovups  xmm1, xmmword ptr [rbp-0xDC]
+       vinsertps xmm1, xmm1, xmm1, 56
+       vmulps   xmm1, xmm1, xmm4
+       vpermilps xmm4, xmm1, -11
+       vaddps   xmm4, xmm4, xmm1
+       vpermilps xmm1, xmm1, -86
+       vaddps   xmm1, xmm1, xmm4
+       vmulss   xmm1, xmm1, xmm13
+       vbroadcastss xmm1, xmm1
+       vmovaps  xmm4, xmmword ptr [rbp-0x120]
+       vmulps   xmm1, xmm1, xmm4
+       vmovaps  xmm4, xmmword ptr [rbp-0x250]
+       vaddps   xmm1, xmm1, xmm4
+       vsubps   xmm1, xmm1, xmm12
+       vmovaps  xmm4, xmm1
+       vinsertps xmm4, xmm4, xmm4, 56
+       vmovups  xmm13, xmmword ptr [rbp-0xE8]
+       vinsertps xmm13, xmm13, xmm13, 56
+       vmulps   xmm4, xmm13, xmm4
+       vpermilps xmm13, xmm4, -11
+       vaddps   xmm13, xmm13, xmm4
+       vpermilps xmm4, xmm4, -86
+       vaddps   xmm4, xmm4, xmm13
+       vmovss   dword ptr [rbp-0x388], xmm4
+       vinsertps xmm1, xmm1, xmm1, 56
+       vmovaps  xmm13, xmmword ptr [rbp-0xD0]
+       vinsertps xmm13, xmm13, xmm13, 56
+       vmulps   xmm1, xmm13, xmm1
+       vpermilps xmm13, xmm1, -11
+       vaddps   xmm13, xmm13, xmm1
+       vpermilps xmm1, xmm1, -86
+       vaddps   xmm1, xmm1, xmm13
+       vmovss   dword ptr [rbp-0x38C], xmm1
+       vmovshdup xmm13, xmm0
+       vsubss   xmm13, xmm13, xmm11
+       vmulss   xmm13, xmm13, dword ptr [rbp-0x148]
+       vmulss   xmm1, xmm13, dword ptr [rbp-0x120]
+       vmovaps  xmm4, xmm0
+       vsubss   xmm1, xmm4, xmm1
+       vmovss   dword ptr [rbp-0x390], xmm1
+       vmulss   xmm4, xmm13, dword ptr [rbp-0x118]
+       vunpckhps xmm0, xmm0, xmm0
+       vsubss   xmm0, xmm0, xmm4
+       vmovss   dword ptr [rbp-0x394], xmm0
+       mov      edx, -1
+       xor      r8d, r8d
+       test     eax, eax
+       cmove    edx, r8d
+       vxorps   xmm4, xmm4, xmm4
+       vmovd    xmm13, edx
+       vmovss   xmm0, dword ptr [rbp-0x378]
+       vandps   xmm0, xmm0, xmm13
+       vmovss   xmm1, dword ptr [rbp-0x380]
+       vandnps  xmm1, xmm13, xmm1
+       vorps    xmm0, xmm1, xmm0
+       vinsertps xmm0, xmm4, xmm0, 14
+       mov      edx, -1
+ 
+G_M000_IG33:                ;; offset=0x1DAF
+       test     eax, eax
+       cmove    edx, r8d
+       vmovd    xmm1, edx
+       vmovss   xmm4, dword ptr [rbp-0x37C]
+       vandps   xmm4, xmm4, xmm1
+       vmovss   xmm13, dword ptr [rbp-0x384]
+       vandnps  xmm1, xmm1, xmm13
+       vorps    xmm1, xmm1, xmm4
+       vinsertps xmm0, xmm0, xmm1, 16
+       mov      edx, -1
+ 
+G_M000_IG34:                ;; offset=0x1DE1
+       test     eax, eax
+       cmove    edx, r8d
+       vxorps   xmm1, xmm1, xmm1
+       vmovd    xmm4, edx
+       vmovss   xmm13, dword ptr [rbp-0x388]
+       vandps   xmm13, xmm13, xmm4
+       vmovss   xmm9, dword ptr [rbp-0x390]
+       vandnps  xmm4, xmm4, xmm9
+       vorps    xmm4, xmm4, xmm13
+       vinsertps xmm1, xmm1, xmm4, 14
+       mov      edx, -1
+ 
+G_M000_IG35:                ;; offset=0x1E18
+       test     eax, eax
+       cmove    edx, r8d
+       vmovd    xmm4, edx
+       vmovss   xmm9, dword ptr [rbp-0x38C]
+       vandps   xmm9, xmm9, xmm4
+       vmovss   xmm13, dword ptr [rbp-0x394]
+       vandnps  xmm4, xmm4, xmm13
+       vorps    xmm4, xmm4, xmm9
+       vinsertps xmm1, xmm1, xmm4, 16
+       vmovss   xmm4, dword ptr [rsi]
+       vmovss   xmm9, dword ptr [rdi]
+       mov      edx, -1
+ 
+G_M000_IG36:                ;; offset=0x1E53
+       test     eax, eax
+       cmove    edx, r8d
+       vmovd    xmm13, edx
+       vandps   xmm4, xmm4, xmm13
+       vandnps  xmm9, xmm13, xmm9
+       vorps    xmm4, xmm9, xmm4
+       vmovss   dword ptr [rbp-0x254], xmm4
+       vmovss   xmm9, dword ptr [rdi+0x04]
+       vmovss   xmm13, dword ptr [rsi+0x04]
+       mov      edx, -1
+ 
+G_M000_IG37:                ;; offset=0x1E82
+       test     eax, eax
+       cmove    edx, r8d
+       vmovd    xmm4, edx
+       vandps   xmm9, xmm9, xmm4
+       vandnps  xmm4, xmm4, xmm13
+       vorps    xmm4, xmm4, xmm9
+       vmovss   dword ptr [rbp-0x260], xmm4
+       vmovaps  xmm9, xmm0
+       vsubps   xmm1, xmm1, xmm9
+       vmovaps  xmm9, xmm1
+       vmovaps  xmm13, xmm1
+       vmulss   xmm9, xmm9, xmm13
+       vmovss   dword ptr [rbp-0x544], xmm9
+       vmovshdup xmm13, xmm1
+       vmovshdup xmm9, xmm1
+       vmulss   xmm9, xmm13, xmm9
+       vaddss   xmm9, xmm9, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x348], xmm9
+       vdivss   xmm13, xmm7, xmm9
+       vmovss   dword ptr [rbp-0x34C], xmm13
+       vmovaps  xmm13, xmm0
+       vmovaps  xmm9, xmm1
+       vmulss   xmm9, xmm13, xmm9
+       vmovss   dword ptr [rbp-0x544], xmm9
+       vmovshdup xmm13, xmm0
+       vmovshdup xmm9, xmm1
+       vmulss   xmm9, xmm13, xmm9
+       vaddss   xmm9, xmm9, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x350], xmm9
+       vmovaps  xmm13, xmm0
+       vmovaps  xmm9, xmm0
+       vmulss   xmm9, xmm13, xmm9
+       vmovss   dword ptr [rbp-0x544], xmm9
+       vmovshdup xmm13, xmm0
+       vmovshdup xmm9, xmm0
+       vmulss   xmm9, xmm13, xmm9
+       vaddss   xmm9, xmm9, dword ptr [rbp-0x544]
+       vmovss   xmm13, dword ptr [rbp-0x254]
+       vmulss   xmm13, xmm13, xmm13
+       vsubss   xmm9, xmm9, xmm13
+       vmovss   dword ptr [rbp-0x354], xmm9
+       vmovss   xmm13, dword ptr [rbp-0x350]
+       vmulss   xmm13, xmm13, xmm13
+       vmovss   xmm9, dword ptr [rbp-0x348]
+       vmulss   xmm9, xmm9, dword ptr [rbp-0x354]
+       vsubss   xmm9, xmm13, xmm9
+       vxorps   xmm13, xmm13, xmm13
+       vmaxss   xmm9, xmm13, xmm9
+       vsqrtss  xmm9, xmm9, xmm9
+       vmulss   xmm9, xmm9, dword ptr [rbp-0x34C]
+       vmovss   dword ptr [rbp-0x358], xmm9
+       vmovss   xmm9, dword ptr [rbp-0x350]
+       vxorps   xmm9, xmm9, xmmword ptr [reloc @RWD16]
+       vmulss   xmm9, xmm9, dword ptr [rbp-0x34C]
+       vmovss   dword ptr [rbp-0x35C], xmm9
+       vsubss   xmm13, xmm9, dword ptr [rbp-0x358]
+       vaddss   xmm9, xmm9, dword ptr [rbp-0x358]
+       vmovss   dword ptr [rbp-0x258], xmm9
+       vmovss   xmm9, dword ptr [rbp-0x348]
+       vandps   xmm9, xmm9, xmmword ptr [reloc @RWD48]
+       vbroadcastss xmm4, xmm9
+       vcmpltps xmm4, xmm4, xmmword ptr [reloc @RWD80]
+       vmovss   xmm9, dword ptr [rbp-0x35C]
+       vandps   xmm9, xmm9, xmm4
+ 
+G_M000_IG38:                ;; offset=0x2003
+       vandnps  xmm13, xmm4, xmm13
+       vorps    xmm13, xmm13, xmm9
+       vmovss   xmm9, dword ptr [rbp-0x35C]
+       vandps   xmm9, xmm9, xmm4
+       vmovups  xmmword ptr [rbp-0x570], xmm9
+       vmovss   xmm9, dword ptr [rbp-0x258]
+       vandnps  xmm4, xmm4, xmm9
+       vorps    xmm9, xmm4, xmmword ptr [rbp-0x570]
+       vmovss   dword ptr [rbp-0x258], xmm9
+       vmovss   xmm9, dword ptr [rbp-0x260]
+       vxorps   xmm4, xmm9, xmmword ptr [reloc @RWD16]
+       vmaxss   xmm4, xmm4, xmm13
+       vmovaps  xmm13, xmm9
+       vminss   xmm13, xmm13, xmm4
+       vminss   xmm9, xmm9, dword ptr [rbp-0x258]
+       vmovaps  xmm4, xmm3
+       vmovss   dword ptr [rbp-0x360], xmm4
+       vmovaps  xmm4, xmm1
+       vmulss   xmm4, xmm13, xmm4
+       vmovss   dword ptr [rbp-0x544], xmm4
+       vmovaps  xmm4, xmm0
+       vaddss   xmm4, xmm4, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x364], xmm4
+       mov      edx, -1
+ 
+G_M000_IG39:                ;; offset=0x2099
+       test     eax, eax
+       cmove    edx, r8d
+       vmovd    xmm4, edx
+       vmovaps  xmmword ptr [rbp-0x500], xmm4
+       vmovss   xmm4, dword ptr [rbp-0x360]
+       vandps   xmm4, xmm4, xmmword ptr [rbp-0x500]
+       vmovups  xmmword ptr [rbp-0x570], xmm4
+       vmovss   xmm4, dword ptr [rbp-0x364]
+       vmovups  xmmword ptr [rbp-0x560], xmm4
+       vmovaps  xmm4, xmmword ptr [rbp-0x500]
+       vandnps  xmm4, xmm4, xmmword ptr [rbp-0x560]
+       vorps    xmm4, xmm4, xmmword ptr [rbp-0x570]
+       vinsertps xmm14, xmm14, xmm4, 0
+       mov      edx, -1
+ 
+G_M000_IG40:                ;; offset=0x20F6
+       test     eax, eax
+       cmove    edx, r8d
+       vmovd    xmm4, edx
+       vmovaps  xmmword ptr [rbp-0x510], xmm4
+       vmovaps  xmm4, xmm13
+       vandps   xmm4, xmm4, xmmword ptr [rbp-0x510]
+       vmovups  xmmword ptr [rbp-0x570], xmm4
+       vmovaps  xmm4, xmm11
+       vmovups  xmmword ptr [rbp-0x560], xmm4
+       vmovaps  xmm4, xmmword ptr [rbp-0x510]
+       vandnps  xmm4, xmm4, xmmword ptr [rbp-0x560]
+       vorps    xmm4, xmm4, xmmword ptr [rbp-0x570]
+       vinsertps xmm14, xmm14, xmm4, 16
+       vunpckhps xmm4, xmm3, xmm3
+       vmovss   dword ptr [rbp-0x368], xmm4
+       vmovshdup xmm4, xmm1
+       vmulss   xmm4, xmm13, xmm4
+       vmovss   dword ptr [rbp-0x544], xmm4
+       vmovshdup xmm4, xmm0
+       vaddss   xmm4, xmm4, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x36C], xmm4
+       mov      edx, -1
+ 
+G_M000_IG41:                ;; offset=0x217D
+       test     eax, eax
+       cmove    edx, r8d
+       vmovd    xmm4, edx
+       vmovaps  xmmword ptr [rbp-0x520], xmm4
+       vmovss   xmm4, dword ptr [rbp-0x368]
+       vandps   xmm4, xmm4, xmmword ptr [rbp-0x520]
+       vmovups  xmmword ptr [rbp-0x570], xmm4
+       vmovss   xmm4, dword ptr [rbp-0x36C]
+       vmovups  xmmword ptr [rbp-0x560], xmm4
+       vmovaps  xmm4, xmmword ptr [rbp-0x520]
+       vandnps  xmm4, xmm4, xmmword ptr [rbp-0x560]
+       vorps    xmm4, xmm4, xmmword ptr [rbp-0x570]
+       vinsertps xmm14, xmm14, xmm4, 32
+       vmovaps  xmm4, xmm3
+       vmovss   dword ptr [rbp-0x370], xmm4
+       vmovaps  xmm4, xmm1
+       vmulss   xmm4, xmm9, xmm4
+       vmovss   dword ptr [rbp-0x544], xmm4
+       vmovaps  xmm4, xmm0
+       vaddss   xmm4, xmm4, dword ptr [rbp-0x544]
+       vmovss   dword ptr [rbp-0x374], xmm4
+       mov      edx, -1
+ 
+G_M000_IG42:                ;; offset=0x220A
+       test     eax, eax
+       cmove    edx, r8d
+       vmovd    xmm4, edx
+       vmovaps  xmmword ptr [rbp-0x530], xmm4
+       vmovss   xmm4, dword ptr [rbp-0x370]
+       vandps   xmm4, xmm4, xmmword ptr [rbp-0x530]
+       vmovups  xmmword ptr [rbp-0x570], xmm4
+       vmovss   xmm4, dword ptr [rbp-0x374]
+       vmovups  xmmword ptr [rbp-0x560], xmm4
+       vmovaps  xmm4, xmmword ptr [rbp-0x530]
+       vandnps  xmm4, xmm4, xmmword ptr [rbp-0x560]
+       vorps    xmm4, xmm4, xmmword ptr [rbp-0x570]
+       vinsertps xmm15, xmm15, xmm4, 0
+       mov      edx, -1
+ 
+G_M000_IG43:                ;; offset=0x2267
+       test     eax, eax
+       cmove    edx, r8d
+       vmovd    xmm4, edx
+       vmovaps  xmmword ptr [rbp-0x540], xmm4
+       vmovaps  xmm4, xmm9
+       vandps   xmm4, xmm4, xmmword ptr [rbp-0x540]
+       vmovups  xmmword ptr [rbp-0x570], xmm4
+       vmovaps  xmm4, xmmword ptr [rbp-0x540]
+       vandnps  xmm4, xmm4, xmm11
+       vorps    xmm4, xmm4, xmmword ptr [rbp-0x570]
+       vinsertps xmm15, xmm15, xmm4, 16
+       vunpckhps xmm3, xmm3, xmm3
+       vmovshdup xmm1, xmm1
+       vmulss   xmm1, xmm9, xmm1
+       vmovshdup xmm0, xmm0
+       vaddss   xmm0, xmm1, xmm0
+       mov      edx, -1
+ 
+G_M000_IG44:                ;; offset=0x22C2
+       test     eax, eax
+       cmove    edx, r8d
+       vmovd    xmm1, edx
+       vandps   xmm3, xmm3, xmm1
+       vandnps  xmm0, xmm1, xmm0
+       vorps    xmm0, xmm0, xmm3
+       vinsertps xmm15, xmm15, xmm0, 32
+       mov      byte  ptr [rbx+0x5C], 1
+       vucomiss xmm9, xmm13
+       seta     dl
+       mov      byte  ptr [rbx+0x5D], dl
+       mov      edx, -1
+ 
+G_M000_IG45:                ;; offset=0x22F2
+       test     eax, eax
+       cmove    edx, r8d
+       vmovd    xmm0, edx
+       vpbroadcastd xmm0, xmm0
+       vmovaps  xmm1, xmmword ptr [rbp-0x1A0]
+       vandps   xmm1, xmm1, xmm0
+       vmovaps  xmm3, xmmword ptr [rbp-0x1C0]
+       vmovaps  xmm4, xmm3
+       vandnps  xmm0, xmm0, xmm4
+       vorps    xmm0, xmm0, xmm1
+       mov      edx, -1
+ 
+G_M000_IG46:                ;; offset=0x2326
+       test     eax, eax
+       cmove    edx, r8d
+       vmovd    xmm1, edx
+       vpbroadcastd xmm1, xmm1
+       vandps   xmm4, xmm12, xmm1
+       vmovaps  xmm9, xmm2
+       vandnps  xmm1, xmm1, xmm9
+       vorps    xmm1, xmm1, xmm4
+       vmovsd   qword ptr [rbp-0x1B0], xmm0
+       vextractps dword ptr [rbp-0x1A8], xmm0, 2
+       vmovaps  xmm0, xmm1
+ 
+G_M000_IG47:                ;; offset=0x235C
+       test     eax, eax
+       sete     al
+       movzx    rax, al
+       test     ecx, ecx
+       sete     cl
+       movzx    rcx, cl
+       test     eax, ecx
+       je       G_M000_IG49
+       vmovaps  xmm0, xmm2
+       vxorps   xmm0, xmm0, xmmword ptr [reloc @RWD16]
+       vmovss   xmm3, dword ptr [rbp-0x120]
+       vmulss   xmm3, xmm3, dword ptr [rbp-0x120]
+       vmovss   xmm4, dword ptr [rbp-0x118]
+       vmulss   xmm4, xmm4, dword ptr [rbp-0x118]
+       vaddss   xmm3, xmm3, xmm4
+       vdivss   xmm3, xmm7, xmm3
+       vmovss   dword ptr [rbp-0x25C], xmm3
+       vmovss   xmm4, dword ptr [rsi+0x04]
+       vmovss   xmm12, dword ptr [rdi+0x04]
+       vmovups  xmm11, xmmword ptr [rbp-0xDC]
+       vinsertps xmm11, xmm11, xmm11, 56
+       vmovaps  xmm13, xmm0
+       vinsertps xmm13, xmm13, xmm13, 56
+       vmulps   xmm11, xmm13, xmm11
+       vpermilps xmm13, xmm11, -11
+       vaddps   xmm13, xmm13, xmm11
+       vpermilps xmm11, xmm11, -86
+       vaddps   xmm11, xmm11, xmm13
+       vmovshdup xmm0, xmm0
+       vmovss   xmm13, dword ptr [rbp-0xD8]
+       vmulss   xmm1, xmm0, xmm13
+       vsubss   xmm1, xmm11, xmm1
+       vmulss   xmm11, xmm13, xmm13
+       vsubss   xmm11, xmm7, xmm11
+       vbroadcastss xmm3, dword ptr [reloc @RWD104]
+       vmaxss   xmm3, xmm3, xmm11
+       vdivss   xmm1, xmm1, xmm3
+       vmulss   xmm1, xmm1, xmm13
+       vsubss   xmm1, xmm1, xmm0
+       vandps   xmm13, xmm13, xmmword ptr [reloc @RWD48]
+       vmulss   xmm3, xmm13, xmm4
+       vxorps   xmm4, xmm12, xmmword ptr [reloc @RWD16]
+       vxorps   xmm11, xmm3, xmmword ptr [reloc @RWD16]
+       vsubss   xmm11, xmm11, xmm0
+       vmovaps  xmm13, xmm12
+       vminss   xmm11, xmm13, xmm11
+       vmaxss   xmm4, xmm4, xmm11
+       vxorps   xmm11, xmm12, xmmword ptr [reloc @RWD16]
+       vsubss   xmm0, xmm3, xmm0
+       vmaxss   xmm0, xmm11, xmm0
+       vminss   xmm0, xmm12, xmm0
+       vmaxss   xmm1, xmm1, xmm4
+       vminss   xmm1, xmm1, xmm0
+       vmovss   xmm3, dword ptr [rbp-0xDC]
+       vmulss   xmm3, xmm3, dword ptr [rbp-0x118]
+       vmovss   xmm11, dword ptr [rbp-0xD4]
+       vmulss   xmm11, xmm11, dword ptr [rbp-0x120]
+       vsubss   xmm3, xmm3, xmm11
+       vmulss   xmm3, xmm3, xmm3
+       vmulss   xmm3, xmm3, dword ptr [rbp-0x25C]
+ 
+G_M000_IG48:                ;; offset=0x24A3
+       vmovss   xmm11, dword ptr [reloc @RWD108]
+       vsubss   xmm3, xmm11, xmm3
+       vmulss   xmm3, xmm3, dword ptr [reloc @RWD112]
+       vbroadcastss xmm11, dword ptr [reloc @RWD00]
+       vminss   xmm3, xmm11, xmm3
+       vxorps   xmm11, xmm11, xmm11
+       vmaxss   xmm3, xmm11, xmm3
+       vmulss   xmm11, xmm1, xmm3
+       vsubss   xmm1, xmm1, xmm11
+       vmulss   xmm4, xmm3, xmm4
+       vaddss   xmm4, xmm4, xmm1
+       vmulss   xmm0, xmm3, xmm0
+       vaddss   xmm0, xmm0, xmm1
+       vmovaps  xmm1, xmm5
+       vinsertps xmm1, xmm14, xmm1, 0
+       vmovaps  xmm3, xmm4
+       vinsertps xmm1, xmm1, xmm3, 16
+       vmovshdup xmm3, xmm5
+       vinsertps xmm14, xmm1, xmm3, 32
+       vmovaps  xmm1, xmm5
+       vinsertps xmm1, xmm15, xmm1, 0
+       vmovaps  xmm3, xmm0
+       vinsertps xmm1, xmm1, xmm3, 16
+       vmovshdup xmm3, xmm5
+       vinsertps xmm15, xmm1, xmm3, 32
+       mov      byte  ptr [rbx+0x5C], 1
+       vucomiss xmm0, xmm4
+       seta     al
+       mov      byte  ptr [rbx+0x5D], al
+       vmovaps  xmm1, xmmword ptr [rbp-0x1C0]
+       vmovaps  xmm12, xmm1
+       vmovaps  xmm0, xmm2
+       vmovsd   qword ptr [rbp-0x1B0], xmm12
+       vextractps dword ptr [rbp-0x1A8], xmm12, 2
+ 
+G_M000_IG49:                ;; offset=0x2552
+       vmovaps  xmm12, xmmword ptr [rbp-0x1B0]
+       vmovaps  xmm1, xmm12
+       vinsertps xmm1, xmm1, xmm1, 56
+       vmovaps  xmm2, xmmword ptr [rbp-0x120]
+       vinsertps xmm2, xmm2, xmm2, 56
+       vmulps   xmm1, xmm2, xmm1
+       vpermilps xmm2, xmm1, -11
+       vaddps   xmm2, xmm2, xmm1
+       vpermilps xmm1, xmm1, -86
+       vaddps   xmm1, xmm1, xmm2
+       vdivss   xmm1, xmm7, xmm1
+       vmovss   xmm3, dword ptr [rbp+0x20]
+       vxorps   xmm2, xmm3, xmmword ptr [reloc @RWD16]
+       lea      rax, bword ptr [rbx+0x3C]
+       lea      rcx, bword ptr [rbx+0x5C]
+       vmovaps  xmm3, xmm14
+       vmovaps  xmm4, xmm0
+       vsubps   xmm3, xmm3, xmm4
+       vinsertps xmm3, xmm3, xmm3, 56
+       vmovaps  xmm4, xmm12
+       vinsertps xmm4, xmm4, xmm4, 56
+       vmulps   xmm3, xmm4, xmm3
+       vpermilps xmm4, xmm3, -11
+       vaddps   xmm4, xmm4, xmm3
+       vpermilps xmm3, xmm3, -86
+       vaddps   xmm3, xmm3, xmm4
+       vmulss   xmm3, xmm3, xmm1
+       vmovss   dword ptr [rax], xmm3
+       vmovaps  xmm9, xmmword ptr [rbp-0x100]
+       vmovaps  xmm3, xmm9
+       vaddps   xmm3, xmm3, xmm14
+       vmovaps  xmm4, xmm10
+       vmovaps  xmm5, xmm3
+       vbroadcastss xmm5, xmm5
+       vmulps   xmm4, xmm5, xmm4
+       vmovaps  xmm5, xmm6
+       vmovshdup xmm7, xmm3
+       vbroadcastss xmm7, xmm7
+       vmulps   xmm5, xmm7, xmm5
+       vaddps   xmm4, xmm5, xmm4
+       vmovaps  xmm5, xmm8
+       vunpckhps xmm3, xmm3, xmm3
+       vbroadcastss xmm3, xmm3
+       vmulps   xmm3, xmm3, xmm5
+       vaddps   xmm3, xmm3, xmm4
+       vmovsd   qword ptr [rbx], xmm3
+       vextractps dword ptr [rbx+0x08], xmm3, 2
+       vmovss   xmm3, dword ptr [rax]
+       vucomiss xmm3, xmm2
+       setae    al
+       movzx    rax, al
+       and      byte  ptr [rcx], al
+       lea      rax, bword ptr [rbx+0x0C]
+       lea      rcx, bword ptr [rbx+0x40]
+       lea      rdx, bword ptr [rbx+0x5D]
+       vmovaps  xmm3, xmm15
+       vmovaps  xmm4, xmm0
+       vsubps   xmm3, xmm3, xmm4
+       vinsertps xmm3, xmm3, xmm3, 56
+       vmovaps  xmm4, xmm12
+       vinsertps xmm4, xmm4, xmm4, 56
+       vmulps   xmm3, xmm4, xmm3
+       vpermilps xmm4, xmm3, -11
+ 
+G_M000_IG50:                ;; offset=0x2680
+       vaddps   xmm4, xmm4, xmm3
+       vpermilps xmm3, xmm3, -86
+       vaddps   xmm3, xmm3, xmm4
+       vmulss   xmm3, xmm3, xmm1
+       vmovss   dword ptr [rcx], xmm3
+       vmovaps  xmm3, xmm9
+       vaddps   xmm3, xmm3, xmm15
+       vmovaps  xmm4, xmm10
+       vmovaps  xmm5, xmm3
+       vbroadcastss xmm5, xmm5
+       vmulps   xmm4, xmm5, xmm4
+       vmovaps  xmm5, xmm6
+       vmovshdup xmm7, xmm3
+       vbroadcastss xmm7, xmm7
+       vmulps   xmm5, xmm7, xmm5
+       vaddps   xmm4, xmm5, xmm4
+       vmovaps  xmm5, xmm8
+       vunpckhps xmm3, xmm3, xmm3
+       vbroadcastss xmm3, xmm3
+       vmulps   xmm3, xmm3, xmm5
+       vaddps   xmm3, xmm3, xmm4
+       vmovsd   qword ptr [rax], xmm3
+       vextractps dword ptr [rax+0x08], xmm3, 2
+       vmovss   xmm3, dword ptr [rcx]
+       vucomiss xmm3, xmm2
+       setae    al
+       movzx    rax, al
+       and      byte  ptr [rdx], al
+       lea      rax, bword ptr [rbx+0x18]
+       lea      rcx, bword ptr [rbx+0x44]
+       lea      rdx, bword ptr [rbx+0x5E]
+       vmovaps  xmm3, xmmword ptr [rbp-0x170]
+       vmovaps  xmm4, xmm3
+       vmovaps  xmm5, xmm0
+       vsubps   xmm4, xmm4, xmm5
+       vinsertps xmm4, xmm4, xmm4, 56
+       vmovaps  xmm5, xmm12
+       vinsertps xmm5, xmm5, xmm5, 56
+       vmulps   xmm4, xmm5, xmm4
+       vpermilps xmm5, xmm4, -11
+       vaddps   xmm5, xmm5, xmm4
+       vpermilps xmm4, xmm4, -86
+       vaddps   xmm4, xmm4, xmm5
+       vmulss   xmm4, xmm4, xmm1
+       vmovss   dword ptr [rcx], xmm4
+       vmovaps  xmm4, xmm9
+       vaddps   xmm3, xmm4, xmm3
+       vmovaps  xmm4, xmm10
+       vmovaps  xmm5, xmm3
+       vbroadcastss xmm5, xmm5
+       vmulps   xmm4, xmm5, xmm4
+       vmovaps  xmm5, xmm6
+       vmovshdup xmm7, xmm3
+       vbroadcastss xmm7, xmm7
+       vmulps   xmm5, xmm7, xmm5
+       vaddps   xmm4, xmm5, xmm4
+       vmovaps  xmm5, xmm8
+       vunpckhps xmm3, xmm3, xmm3
+       vbroadcastss xmm3, xmm3
+       vmulps   xmm3, xmm3, xmm5
+       vaddps   xmm3, xmm3, xmm4
+       vmovsd   qword ptr [rax], xmm3
+       vextractps dword ptr [rax+0x08], xmm3, 2
+       vmovss   xmm3, dword ptr [rcx]
+       vucomiss xmm3, xmm2
+       setae    al
+       movzx    rax, al
+ 
+G_M000_IG51:                ;; offset=0x27A8
+       and      byte  ptr [rdx], al
+       lea      rax, bword ptr [rbx+0x24]
+       lea      rcx, bword ptr [rbx+0x48]
+       lea      rdx, bword ptr [rbx+0x5F]
+       vmovaps  xmm3, xmmword ptr [rbp-0x180]
+       vmovaps  xmm4, xmm3
+       vsubps   xmm0, xmm4, xmm0
+       vinsertps xmm0, xmm0, xmm0, 56
+       vinsertps xmm4, xmm12, xmm12, 56
+       vmulps   xmm0, xmm4, xmm0
+       vpermilps xmm4, xmm0, -11
+       vaddps   xmm4, xmm4, xmm0
+       vpermilps xmm0, xmm0, -86
+       vaddps   xmm0, xmm0, xmm4
+       vmulss   xmm0, xmm0, xmm1
+       vmovss   dword ptr [rcx], xmm0
+       vaddps   xmm0, xmm9, xmm3
+       vmovaps  xmm1, xmm10
+       vmovaps  xmm3, xmm0
+       vbroadcastss xmm3, xmm3
+       vmulps   xmm1, xmm3, xmm1
+       vmovaps  xmm3, xmm6
+       vmovshdup xmm4, xmm0
+       vbroadcastss xmm4, xmm4
+       vmulps   xmm3, xmm4, xmm3
+       vaddps   xmm1, xmm3, xmm1
+       vmovaps  xmm3, xmm8
+       vunpckhps xmm0, xmm0, xmm0
+       vbroadcastss xmm0, xmm0
+       vmulps   xmm0, xmm0, xmm3
+       vaddps   xmm0, xmm0, xmm1
+       vmovsd   qword ptr [rax], xmm0
+       vextractps dword ptr [rax+0x08], xmm0, 2
+       vmovss   xmm0, dword ptr [rcx]
+       vucomiss xmm0, xmm2
+       setae    al
+       movzx    rax, al
+       and      byte  ptr [rdx], al
+       vmovaps  xmm0, xmmword ptr [rbp-0x120]
+       lea      rax, bword ptr [rbx+0x30]
+       vmovaps  xmm1, xmm0
+       vbroadcastss xmm1, xmm1
+       vmulps   xmm1, xmm1, xmm10
+       vmovshdup xmm2, xmm0
+       vbroadcastss xmm2, xmm2
+       vmulps   xmm2, xmm2, xmm6
+       vaddps   xmm1, xmm2, xmm1
+       vunpckhps xmm0, xmm0, xmm0
+       vbroadcastss xmm0, xmm0
+       vmulps   xmm0, xmm0, xmm8
+       vaddps   xmm0, xmm0, xmm1
+       vmovsd   qword ptr [rax], xmm0
+       vextractps dword ptr [rax+0x08], xmm0, 2
+       xor      eax, eax
+       mov      dword ptr [rbx+0x4C], eax
+       mov      dword ptr [rbx+0x50], 1
+       mov      dword ptr [rbx+0x54], 2
+       mov      dword ptr [rbx+0x58], 3
+ 
+G_M000_IG52:                ;; offset=0x28B0
+       vmovaps  xmm6, xmmword ptr [rsp+0x5A0]
+       vmovaps  xmm7, xmmword ptr [rsp+0x590]
+       vmovaps  xmm8, xmmword ptr [rsp+0x580]
+       vmovaps  xmm9, xmmword ptr [rsp+0x570]
+       vmovaps  xmm10, xmmword ptr [rsp+0x560]
+       vmovaps  xmm11, xmmword ptr [rsp+0x550]
+       vmovaps  xmm12, xmmword ptr [rsp+0x540]
+       vmovaps  xmm13, xmmword ptr [rsp+0x530]
+       vmovaps  xmm14, xmmword ptr [rsp+0x520]
+       vmovaps  xmm15, xmmword ptr [rsp+0x510]
+       add      rsp, 0x5B0
+       pop      rbx
+       pop      rsi
+       pop      rdi
+       pop      r14
+       pop      rbp
+       ret      
+ 
+RWD00  	dd	3F800000h		;         1
+RWD04  	dd	00000000h, 00000000h, 00000000h
+RWD16  	dq	8000000080000000h, 8000000080000000h
+RWD32  	dd	2EDBE6FFh		;     1e-10
+RWD36  	dd	358637BDh		;     1e-06
+RWD40  	dd	00000000h, 00000000h
+RWD48  	dq	7FFFFFFF7FFFFFFFh, 7FFFFFFF7FFFFFFFh
+RWD64  	dd	3F3504F3h		;  0.707107
+RWD68  	dd	3F7FF972h		;    0.9999
+RWD72  	dd	283424DCh		;     1e-14
+RWD76  	dd	00000000h
+RWD80  	dq	2B8CBCCC2B8CBCCCh, 2B8CBCCC2B8CBCCCh
+RWD96  	dd	3F000000h		;       0.5
+RWD100 	dd	469C395Dh		;   19996.7
+RWD104 	dd	26901D7Dh		;     1e-15
+RWD108 	dd	3CB851ECh		;    0.0225
+RWD112 	dd	4234FED7h		;   45.2489
+
+; Total bytes of code 10520

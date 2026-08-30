@@ -1,0 +1,48 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Condition="'$(Configuration)'=='Debug'" Command="dotnet &quot;$(ProjectDir)..\DemoContentBuilder\bin\x64\$(Configuration)\net10.0\DemoContentBuilder.dll&quot; &quot;$(ProjectDir)$(ProjectName).content&quot; -debug" />
+    <Exec Condition="'$(Configuration)'!='Debug'" Command="dotnet &quot;$(ProjectDir)..\DemoContentBuilder\bin\x64\Release\net10.0\DemoContentBuilder.dll&quot; &quot;$(ProjectDir)$(ProjectName).content&quot;" />
+  </Target>
+  
+  <ItemGroup>
+    <PackageReference Include="SharpDX" Version="4.2.0" />
+    <PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BepuPhysics\BepuPhysics.csproj" />
+    <ProjectReference Include="..\BepuUtilities\BepuUtilities.csproj" />
+    <ProjectReference Include="..\DemoContentLoader\DemoContentLoader.csproj" />
+    <ProjectReference Include="..\DemoUtilities\DemoUtilities.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="DemoRenderer.shaderarchive" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Constraints\ContactLineExtractors.tt">
+      <LastGenOutput>ContactLineExtractors.cs</LastGenOutput>
+      <Generator>TextTemplatingFileGenerator</Generator>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Constraints\ContactLineExtractors.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ContactLineExtractors.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+</Project>

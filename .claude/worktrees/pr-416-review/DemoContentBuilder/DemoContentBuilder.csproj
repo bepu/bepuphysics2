@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Platforms>x64</Platforms>
+    <LangVersion>latest</LangVersion>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CjClutter.ObjLoader" Version="1.0.0" />
+    <PackageReference Include="SharpDX" Version="4.0.1" />
+    <PackageReference Include="SharpDX.D3DCompiler" Version="4.0.1" />
+    <PackageReference Include="SharpFontStandard" Version="4.0.1" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BepuUtilities\BepuUtilities.csproj" />
+    <ProjectReference Include="..\DemoContentLoader\DemoContentLoader.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Condition="'$(OS)' != 'Unix'" Update="freetype6.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <Target Condition="'$(OS)' == 'Unix'" Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="ln -sf /usr/lib/libfreetype.so.6 $(TargetDir)/freetype6.so" />
+  </Target>
+
+</Project>

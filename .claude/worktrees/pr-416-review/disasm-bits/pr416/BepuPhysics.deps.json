@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "BepuPhysics/2.5.0-beta.24": {
+        "dependencies": {
+          "BepuUtilities": "2.5.0-beta.24"
+        },
+        "runtime": {
+          "BepuPhysics.dll": {}
+        }
+      },
+      "BepuUtilities/2.5.0-beta.24": {
+        "runtime": {
+          "BepuUtilities.dll": {
+            "assemblyVersion": "2.5.0.0",
+            "fileVersion": "2.5.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "BepuPhysics/2.5.0-beta.24": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "BepuUtilities/2.5.0-beta.24": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

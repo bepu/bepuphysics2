@@ -1,0 +1,15 @@
+#version 450
+
+uniform sampler2D SPIRV_Cross_CombinedSourceSampler;
+
+layout(location = 0) in vec2 varying_TextureCoordinates;
+layout(location = 1) flat in vec4 varying_Color;
+layout(location = 0) out vec4 out_var_SV_Target0;
+
+void main()
+{
+    vec4 _29 = texture(SPIRV_Cross_CombinedSourceSampler, varying_TextureCoordinates) * varying_Color;
+    float _31 = _29.w;
+    out_var_SV_Target0 = vec4(_29.xyz * _31, _31);
+}
+

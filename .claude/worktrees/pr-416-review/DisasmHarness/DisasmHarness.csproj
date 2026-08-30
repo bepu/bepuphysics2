@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Optimize>true</Optimize>
+        <TieredCompilation>false</TieredCompilation>
+        <!-- BitsDir selects which build of BepuPhysics to disassemble against. -->
+        <BitsDir Condition="'$(BitsDir)' == ''">..\disasm-bits\pr416</BitsDir>
+    </PropertyGroup>
+    <ItemGroup>
+        <Reference Include="BepuPhysics">
+            <HintPath>$(BitsDir)\BepuPhysics.dll</HintPath>
+        </Reference>
+        <Reference Include="BepuUtilities">
+            <HintPath>$(BitsDir)\BepuUtilities.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+</Project>

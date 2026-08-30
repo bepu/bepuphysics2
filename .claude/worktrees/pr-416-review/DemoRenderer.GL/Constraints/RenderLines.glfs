@@ -1,0 +1,30 @@
+#version 450
+
+layout(location = 0) in vec3 varying_ToBoxOffset;
+layout(location = 1) flat in vec3 varying_LineStart;
+layout(location = 2) flat in vec3 varying_LineDirection;
+layout(location = 3) flat in float varying_LineLength;
+layout(location = 4) flat in uint varying_ScreenLineColor0;
+layout(location = 5) flat in uint varying_ScreenLineColor1;
+layout(location = 6) flat in float varying_InverseLineRadius;
+layout(location = 7) flat in float varying_TanAnglePerPixel;
+layout(location = 0) out vec3 out_var_SV_Target0;
+
+void main()
+{
+    float _43 = length(varying_ToBoxOffset);
+    vec3 _45 = varying_ToBoxOffset / vec3(_43);
+    vec3 _46 = -varying_LineStart;
+    float _49 = dot(varying_LineDirection, _45);
+    vec3 _58 = varying_LineStart + (varying_LineDirection * clamp((dot(varying_LineDirection, _46) - (dot(_45, _46) * _49)) / max(1.0000000036274937255387218471014e-15, 1.0 - (_49 * _49)), 0.0, varying_LineLength));
+    float _62 = distance(_45 * dot(_58, _45), _58) * varying_InverseLineRadius;
+    float _65 = 0.5 * ((varying_TanAnglePerPixel * _43) * varying_InverseLineRadius);
+    float _67 = max(-1.0, _62 - _65);
+    float _69 = min(1.0, _62 + _65);
+    float _70 = clamp(_69, -1.0, 0.0);
+    float _74 = clamp(_69, 0.0, 1.0);
+    float _79 = clamp(_67, -1.0, 0.0);
+    float _83 = clamp(_67, 0.0, 1.0);
+    out_var_SV_Target0 = mix(vec3(float(varying_ScreenLineColor1 & 2047u) * 0.000488519784994423389434814453125, float((varying_ScreenLineColor1 >> 11u) & 2047u) * 0.000488519784994423389434814453125, float(varying_ScreenLineColor1 >> 22u) * 0.000977517105638980865478515625), vec3(float(varying_ScreenLineColor0 & 2047u) * 0.000488519784994423389434814453125, float((varying_ScreenLineColor0 >> 11u) & 2047u) * 0.000488519784994423389434814453125, float(varying_ScreenLineColor0 >> 22u) * 0.000977517105638980865478515625), vec3(clamp((((_70 + ((0.5 * _70) * _70)) + (_74 - ((0.5 * _74) * _74))) - ((_79 + ((0.5 * _79) * _79)) + (_83 - ((0.5 * _83) * _83)))) / (_69 - _67), 0.0, 1.0)));
+}
+

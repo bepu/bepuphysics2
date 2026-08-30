@@ -1,0 +1,64 @@
+#version 450
+
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+
+struct SphereInstance
+{
+    vec3 Position;
+    float Radius;
+    vec3 PackedOrientation;
+    uint PackedColor;
+};
+
+layout(binding = 0, std140) uniform type_VertexConstants
+{
+    mat4 Projection;
+    vec3 CameraPosition;
+    float NearClip;
+    vec3 CameraRight;
+    float Padding0;
+    vec3 CameraUp;
+    float Padding1;
+    vec3 CameraBackward;
+} VertexConstants;
+
+layout(binding = 0, std430) readonly buffer type_StructuredBuffer_SphereInstance
+{
+    SphereInstance _m0[];
+} Instances;
+
+layout(location = 0) out vec3 varying_RayDirection;
+layout(location = 1) flat out vec3 varying_Position;
+layout(location = 2) flat out float varying_Radius;
+layout(location = 3) flat out vec3 varying_PackedOrientation;
+layout(location = 4) flat out uint varying_PackedColor;
+
+void main()
+{
+    uint _54 = uint(int(uint(gl_VertexID) >> 3u));
+    vec3 _63 = Instances._m0[_54].Position - VertexConstants.CameraPosition;
+    vec3 _73 = vec3(float((uint(gl_VertexID) & 1u) << 1u), float(uint(gl_VertexID) & 2u), float((uint(gl_VertexID) & 4u) >> 1u)) - vec3(1.0);
+    float _82 = dot(VertexConstants.CameraBackward, _63);
+    vec3 _85 = vec3(dot(VertexConstants.CameraRight, _63), dot(VertexConstants.CameraUp, _63), _82) + (_73 * Instances._m0[_54].Radius);
+    vec3 _98;
+    if (_73.z > 0.0)
+    {
+        vec3 _97 = _85;
+        _97.z = max(min((-9.9999997473787516355514526367188e-06) - VertexConstants.NearClip, _85.z), _82 - Instances._m0[_54].Radius);
+        _98 = _97;
+    }
+    else
+    {
+        _98 = _85;
+    }
+    gl_Position = VertexConstants.Projection * vec4(_98, 1.0);
+    varying_RayDirection = ((VertexConstants.CameraRight * _98.x) + (VertexConstants.CameraUp * _98.y)) + (VertexConstants.CameraBackward * _98.z);
+    varying_Position = _63;
+    varying_Radius = Instances._m0[_54].Radius;
+    varying_PackedOrientation = Instances._m0[_54].PackedOrientation;
+    varying_PackedColor = Instances._m0[_54].PackedColor;
+}
+

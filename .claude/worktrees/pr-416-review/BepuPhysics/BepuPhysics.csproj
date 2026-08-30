@@ -1,0 +1,72 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Speedy real time physics simulation library.</Description>
+    <Configurations>Debug;Release;ReleaseNoProfiling</Configurations>
+    <PackageTags>physics;3d;rigid body;real time;simulation</PackageTags>
+    <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
+
+    <!-- CS1573 Parameter has no matching param tag in the XML comment for (but other parameters do) -->
+    <!-- CS1591 Missing XML comment for publicly visible type or member -->
+    <!-- CA2014 Stackalloc in loop -->
+    <NoWarn>1573;1591;CA2014</NoWarn>
+  </PropertyGroup>
+
+  <Import Project="..\CommonSettings.props" />
+
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <Optimize>false</Optimize>
+    <DefineConstants>TRACE;DEBUG;CHECKMATH;PROFILE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;RELEASE;PROFILE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='ReleaseNoProfiling'">
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;RELEASE</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BepuUtilities\BepuUtilities.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="CollisionDetection\DepthRefiner.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>DepthRefiner.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Constraints\Contact\ContactConvexTypes.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ContactConvexTypes.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Constraints\Contact\ContactNonconvexTypes.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ContactNonconvexTypes.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="CollisionDetection\DepthRefiner.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>DepthRefiner.cs</LastGenOutput>
+    </None>
+    <None Update="Constraints\Contact\ContactConvexTypes.tt">
+      <LastGenOutput>ContactConvexTypes.cs</LastGenOutput>
+      <Generator>TextTemplatingFileGenerator</Generator>
+    </None>
+    <None Update="Constraints\Contact\ContactNonconvexTypes.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ContactNonconvexTypes.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+</Project>

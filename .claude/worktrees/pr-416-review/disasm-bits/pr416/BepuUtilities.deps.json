@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "BepuUtilities/2.5.0-beta.24": {
+        "runtime": {
+          "BepuUtilities.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "BepuUtilities/2.5.0-beta.24": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

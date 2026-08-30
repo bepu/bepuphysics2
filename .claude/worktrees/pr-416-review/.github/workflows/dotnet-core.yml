@@ -1,0 +1,41 @@
+name: .NET Core - Build and Test
+
+on:
+  push:
+    paths-ignore:
+      - '.github/**'
+      - 'Documentation/**'  
+  pull_request:
+    paths-ignore:
+      - '.github/**'
+      - 'Documentation/**'
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.x'
+        include-prerelease: true
+    - name: Install dependencies
+      run: |
+        dotnet restore DemoContentBuilder
+        dotnet restore Demos
+    - name: Build
+      run: |
+        dotnet build DemoContentBuilder --configuration Release --no-restore /p:Platform=x64
+        dotnet build Demos --configuration Release --no-restore
+    - name: Test
+      run: dotnet test DemoTests -c Release --verbosity normal
+#    - name: Publish
+#      if: github.event_name != 'pull_request'
+#      run: |
+#        dotnet nuget add source "https://nuget.pkg.github.com/bepu/index.json" --name "github" --username "rossnordby" --password "${{secrets.GITHUB_TOKEN}}"
+#        dotnet pack "BepuPhysics" -c Release
+#        dotnet pack "BepuUtilities" -c Release
+#        dotnet nuget push "**/*.nupkg" -s "github" -k "${{secrets.GITHUB_TOKEN}}" --skip-duplicate
+#        dotnet nuget push "**/*.nupkg" -s "https://api.nuget.org/v3/index.json" -k "${{secrets.NUGET_KEY}}" --skip-duplicate

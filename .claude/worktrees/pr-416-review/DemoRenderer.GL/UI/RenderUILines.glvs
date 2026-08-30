@@ -1,0 +1,52 @@
+#version 450
+
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+
+struct ScreenLineInstance
+{
+    uint PackedStart;
+    uint PackedEnd;
+    float Radius;
+    uint PackedColor;
+};
+
+layout(binding = 0, std140) uniform type_VertexConstants
+{
+    vec2 PackedToScreenScale;
+    vec2 ScreenToNDCScale;
+} VertexConstants;
+
+layout(binding = 0, std430) readonly buffer type_StructuredBuffer_ScreenLineInstance
+{
+    ScreenLineInstance _m0[];
+} Instances;
+
+layout(location = 0) flat out vec2 varying_Start;
+layout(location = 1) flat out vec2 varying_LineDirection;
+layout(location = 2) flat out float varying_LineLength;
+layout(location = 3) flat out float varying_Radius;
+layout(location = 4) flat out vec3 varying_Color;
+
+void main()
+{
+    uint _59 = uint(int(uint(gl_VertexID) >> 2u));
+    vec2 _73 = vec2(float(Instances._m0[_59].PackedStart & 65535u), float(Instances._m0[_59].PackedStart >> 16u)) * VertexConstants.PackedToScreenScale;
+    vec2 _97 = (vec2(float(Instances._m0[_59].PackedEnd & 65535u), float(Instances._m0[_59].PackedEnd >> 16u)) * VertexConstants.PackedToScreenScale) - _73;
+    float _98 = length(_97);
+    vec2 _103 = mix(vec2(1.0, 0.0), _97 / vec2(_98), bvec2(_98 > 9.9999997473787516355514526367188e-06));
+    float _108 = Instances._m0[_59].Radius + 0.707106769084930419921875;
+    float _109 = _108 * 2.0;
+    vec2 _112 = vec2(_98 + _109, _109) * vec2(float(uint(gl_VertexID) & 1u), float((uint(gl_VertexID) >> 1u) & 1u));
+    gl_Position = vec4((((_73 + (_103 * (_112.x - _108))) + (vec2(-_103.y, _103.x) * (_112.y - _108))) * VertexConstants.ScreenToNDCScale) + vec2(-1.0, 1.0), 0.5, 1.0);
+    // EDIT: Adjusts for OpenGL screenspace.
+    gl_Position.y -= 2.0;
+    varying_Start = _73;
+    varying_LineDirection = _103;
+    varying_LineLength = _98;
+    varying_Radius = Instances._m0[_59].Radius;
+    varying_Color = vec3(float(Instances._m0[_59].PackedColor & 2047u) * 0.000488519784994423389434814453125, float((Instances._m0[_59].PackedColor >> 11u) & 2047u) * 0.000488519784994423389434814453125, float(Instances._m0[_59].PackedColor >> 22u) * 0.000977517105638980865478515625);
+}
+

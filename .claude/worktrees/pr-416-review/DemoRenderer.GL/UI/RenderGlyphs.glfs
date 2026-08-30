@@ -1,0 +1,15 @@
+#version 450
+
+uniform sampler2D SPIRV_Cross_CombinedAtlasSampler;
+
+layout(location = 0) in vec2 varying_TextureCoordinates;
+layout(location = 1) flat in float varying_DistanceScale;
+layout(location = 2) flat in vec4 varying_Color;
+layout(location = 0) out vec4 out_var_SV_Target0;
+
+void main()
+{
+    float _41 = varying_Color.w * clamp(0.5 - (texture(SPIRV_Cross_CombinedAtlasSampler, varying_TextureCoordinates).x * varying_DistanceScale), 0.0, 1.0);
+    out_var_SV_Target0 = vec4(varying_Color.xyz * _41, _41);
+}
+

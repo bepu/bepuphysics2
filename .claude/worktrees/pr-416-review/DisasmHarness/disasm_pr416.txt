@@ -1,0 +1,80 @@
+; Assembly listing for method Program:ConsumeContinuation(byref):int (FullOpts)
+; Emitting BLENDED_CODE for generic X64 + VEX on Windows
+; FullOpts code
+; optimized code
+; rsp based frame
+; partially interruptible
+; No PGO data
+; 0 inlinees with PGO data; 2 single block inlinees; 0 inlinees without PGO data
+
+G_M000_IG01:
+ 
+G_M000_IG02:
+       mov      eax, dword ptr [rcx+0x0C]
+       mov      edx, eax
+       shr      edx, 30
+       movzx    rdx, dl
+       test     edx, edx
+       je       SHORT G_M000_IG05
+ 
+G_M000_IG03:
+       mov      edx, dword ptr [rcx+0x04]
+       add      edx, dword ptr [rcx+0x08]
+       and      eax, 0xD1FFAB1E
+       add      eax, edx
+ 
+G_M000_IG04:
+       ret      
+ 
+G_M000_IG05:
+       mov      eax, dword ptr [rcx]
+ 
+G_M000_IG06:
+       ret      
+ 
+; Total bytes of code 32
+
+; Assembly listing for method Program:Make(int,int):BepuPhysics.Collidables.TypedIndex (FullOpts)
+; Emitting BLENDED_CODE for generic X64 + VEX on Windows
+; FullOpts code
+; optimized code
+; rsp based frame
+; partially interruptible
+; No PGO data
+; 0 inlinees with PGO data; 1 single block inlinees; 0 inlinees without PGO data
+
+G_M000_IG01:
+ 
+G_M000_IG02:
+       shl      ecx, 24
+       or       ecx, edx
+       mov      eax, ecx
+       or       eax, 0xD1FFAB1E
+ 
+G_M000_IG03:
+       ret      
+ 
+; Total bytes of code 13
+
+; Assembly listing for method Program:Exists(BepuPhysics.Collidables.TypedIndex):bool (FullOpts)
+; Emitting BLENDED_CODE for generic X64 + VEX on Windows
+; FullOpts code
+; optimized code
+; rsp based frame
+; partially interruptible
+; No PGO data
+; 0 inlinees with PGO data; 1 single block inlinees; 0 inlinees without PGO data
+
+G_M000_IG01:
+ 
+G_M000_IG02:
+       test     ecx, 0xD1FFAB1E
+       setne    al
+       movzx    rax, al
+ 
+G_M000_IG03:
+       ret      
+ 
+; Total bytes of code 13
+
+755984

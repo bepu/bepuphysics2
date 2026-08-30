@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>BepuUtilities</AssemblyName>
+    <RootNamespace>BepuUtilities</RootNamespace>
+    <Description>Supporting utilities library for BEPUphysics v2.</Description>
+    <Configurations>Debug;Release</Configurations>
+    <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
+
+    <!-- CS1573 Parameter has no matching param tag in the XML comment for (but other parameters do) -->
+    <!-- CS1591 Missing XML comment for publicly visible type or member -->
+    <NoWarn>1573;1591</NoWarn>
+  </PropertyGroup>
+
+  <Import Project="..\CommonSettings.props" />
+
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <Optimize>false</Optimize>
+    <DefineConstants>TRACE;DEBUG;CHECKMATH</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;RELEASE</DefineConstants>
+  </PropertyGroup>
+
+</Project>
