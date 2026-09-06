@@ -1595,6 +1595,6 @@ partial struct Tree
         int maximumSubtreeStackAllocationCount = 4096, int minimumBinCount = 16, int maximumBinCount = 64, float leafToBinMultiplier = 1 / 16f, int microsweepThreshold = 64, bool deterministic = false)
     {
         BinnedBuild(subtrees, Nodes.Slice(NodeCount), Metanodes.Slice(NodeCount), Leaves.Slice(LeafCount), pool, dispatcher, taskStackPointer, workerIndex,
-            workerCount, targetTaskCount, maximumSubtreeStackAllocationCount, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold);
+            workerCount, targetTaskCount, maximumSubtreeStackAllocationCount, minimumBinCount, maximumBinCount, leafToBinMultiplier, microsweepThreshold, deterministic);
     }
 }
