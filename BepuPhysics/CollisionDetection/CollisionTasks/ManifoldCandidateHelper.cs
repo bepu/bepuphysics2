@@ -360,7 +360,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var bestScore0 = float.MinValue;
             var bestIndex0 = 0;
             //While depth is the dominant heuristic, extremity is used as a bias to keep initial contact selection a little more consistent in near-equal cases.
-            var extremityScale = epsilonScale * 1e-2f;
+            const float extremityScale = 1e-2f;
             var extremityX = 0.7946897654f * extremityScale;
             var extremityY = 0.60701579614f * extremityScale;
             for (int i = 0; i < candidateCount; ++i)
