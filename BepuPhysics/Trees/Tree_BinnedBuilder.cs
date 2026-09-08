@@ -835,7 +835,7 @@ partial struct Tree
         //Padding to avoid shared cache lines.
         [FieldOffset(128)]
         public int SubtreeCountA;
-        [FieldOffset(134)]
+        [FieldOffset(132)]
         public int SubtreeCountB;
     }
 
