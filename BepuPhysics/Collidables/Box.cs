@@ -66,7 +66,7 @@ namespace BepuPhysics.Collidables
         public readonly void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
         {
             maximumRadius = (float)Math.Sqrt(HalfWidth * HalfWidth + HalfHeight * HalfHeight + HalfLength * HalfLength);
-            maximumAngularExpansion = maximumRadius - Vector4.Min(new Vector4(HalfLength), Vector4.Min(new Vector4(HalfHeight), new Vector4(HalfLength))).X;
+            maximumAngularExpansion = maximumRadius - float.Min(HalfWidth, float.Min(HalfHeight, HalfLength));
         }
 
         public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out float t, out Vector3 normal)
@@ -218,7 +218,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Negate(max, out min);
 
             maximumRadius = Vector.SquareRoot(HalfWidth * HalfWidth + HalfHeight * HalfHeight + HalfLength * HalfLength);
-            maximumAngularExpansion = maximumRadius - Vector.Min(HalfLength, Vector.Min(HalfHeight, HalfLength));
+            maximumAngularExpansion = maximumRadius - Vector.Min(HalfWidth, Vector.Min(HalfHeight, HalfLength));
         }
 
         public static int MinimumWideRayCount
