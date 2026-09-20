@@ -464,6 +464,7 @@ namespace BepuPhysics
             var index = HandleToIndex[handle.Value];
             ref var collidable = ref this[index];
             AwakenBodiesInExistingBounds(collidable.BroadPhaseIndex, ref filter);
+            collidable.Shape = newShape;
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
             ComputeNewBoundsAndAwaken(collidable.Pose, newShape, ref filter, out var bounds);
             broadPhase.UpdateStaticBounds(collidable.BroadPhaseIndex, bounds.Min, bounds.Max);
