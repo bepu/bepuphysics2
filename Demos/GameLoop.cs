@@ -1,8 +1,8 @@
-﻿using DemoRenderer;
+﻿using BepuUtilities;
+using BepuUtilities.Memory;
+using DemoRenderer;
 using DemoUtilities;
 using System;
-using BepuUtilities;
-using BepuUtilities.Memory;
 
 namespace Demos;
 
@@ -29,10 +29,10 @@ public class GameLoop : IDisposable
             window.Resolution, enableDeviceDebugLayer: false
         );
         Renderer = new Renderer(Surface);
-        Camera = new Camera(window.Resolution.X / (float)window.Resolution.Y, (float)Math.PI / 3, 0.01f, 100000);            
+        Camera = new Camera(window.Resolution.X / (float)window.Resolution.Y, (float)Math.PI / 3, 0.01f, 100000);
     }
 
-    void Update(float dt)
+    public void Update(float dt)
     {
         Input.Start();
         if (DemoHarness != null)
@@ -51,6 +51,12 @@ public class GameLoop : IDisposable
     {
         DemoHarness = harness;
         Window.Run(Update, OnResize);
+    }
+
+    public void SingleFrame(DemoHarness harness, float dt)
+    {
+        DemoHarness = harness;
+        Window.SingleFrame(Update, OnResize, dt);
     }
 
     private void OnResize(Int2 resolution)
