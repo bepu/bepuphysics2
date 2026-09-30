@@ -87,7 +87,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void CandidateExists(in ManifoldCandidate candidate, in Vector<float> minimumDepth, in Vector<int> rawContactCount, int i, out Vector<int> exists)
         {
-            exists = Vector.BitwiseAnd(Vector.GreaterThan(candidate.Depth, minimumDepth), Vector.LessThan(new Vector<int>(i), rawContactCount));
+            exists = (candidate.Depth > minimumDepth) & (new Vector<int>(i) < rawContactCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -202,12 +202,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //So we just use a dot product with an arbitrary direction.
                 //This is a pretty small detail, but it is cheap enough that there's no reason not to take advantage of it.
                 var extremity = Vector.Abs(candidate.X * 0.7946897654f + candidate.Y * 0.60701579614f);
-                var candidateScore = candidate.Depth + Vector.ConditionalSelect(Vector.GreaterThanOrEqual(candidate.Depth, Vector<float>.Zero), extremity * extremityScale, Vector<float>.Zero);
-                var candidateIsHighestScore = Vector.BitwiseAnd(candidateExists, Vector.GreaterThan(candidateScore, bestScore));
+                var candidateScore = candidate.Depth + Vector.ConditionalSelect(candidate.Depth >= Vector<float>.Zero, extremity * extremityScale, Vector<float>.Zero);
+                var candidateIsHighestScore = candidateExists & (candidateScore > bestScore);
                 ConditionalSelect(candidateIsHighestScore, candidate, contact0, out contact0);
                 bestScore = Vector.ConditionalSelect(candidateIsHighestScore, candidateScore, bestScore);
             }
-            contact0Exists = Vector.GreaterThan(bestScore, new Vector<float>(-float.MaxValue));
+            contact0Exists = bestScore > new Vector<float>(-float.MaxValue);
 
             //Find the most distant point from the starting contact.
             var maxDistanceSquared = Vector<float>.Zero;
@@ -218,14 +218,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var offsetY = candidate.Y - contact0.Y;
                 var distanceSquared = offsetX * offsetX + offsetY * offsetY;
                 ////Penalize speculative contacts; they are not as important in general.
-                //distanceSquared = Vector.ConditionalSelect(Vector.LessThan(candidate.Depth, Vector<float>.Zero), 0.125f * distanceSquared, distanceSquared);
+                //distanceSquared = Vector.ConditionalSelect(candidate.Depth < Vector<float>.Zero, 0.125f * distanceSquared, distanceSquared);
                 CandidateExists(candidate, minimumDepth, maskedContactCount, i, out var candidateExists);
-                var candidateIsMostDistant = Vector.BitwiseAnd(Vector.GreaterThan(distanceSquared, maxDistanceSquared), candidateExists);
+                var candidateIsMostDistant = (distanceSquared > maxDistanceSquared) & candidateExists;
                 maxDistanceSquared = Vector.ConditionalSelect(candidateIsMostDistant, distanceSquared, maxDistanceSquared);
                 ConditionalSelect(candidateIsMostDistant, candidate, contact1, out contact1);
             }
             //There's no point in additional contacts if the distance between the first and second candidates is zero. Note that this captures the case where there is 0 or 1 contact.
-            contact1Exists = Vector.GreaterThan(maxDistanceSquared, epsilonScale * epsilonScale * new Vector<float>(1e-6f));
+            contact1Exists = maxDistanceSquared > epsilonScale * epsilonScale * new Vector<float>(1e-6f);
 
             //Now identify two more points. Using the two existing contacts as a starting edge, pick the points which, when considered as a triangle with the edge,
             //have the largest magnitude negative and positive signed areas.
@@ -242,13 +242,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var candidateOffsetY = candidate.Y - contact0.Y;
                 var signedArea = candidateOffsetX * edgeOffsetY - candidateOffsetY * edgeOffsetX;
                 //Penalize speculative contacts; they are not as important in general.
-                signedArea = Vector.ConditionalSelect(Vector.LessThan(candidate.Depth, Vector<float>.Zero), 0.25f * signedArea, signedArea);
+                signedArea = Vector.ConditionalSelect(candidate.Depth < Vector<float>.Zero, 0.25f * signedArea, signedArea);
 
                 CandidateExists(candidate, minimumDepth, maskedContactCount, i, out var candidateExists);
-                var isMinArea = Vector.BitwiseAnd(Vector.LessThan(signedArea, minSignedArea), candidateExists);
+                var isMinArea = (signedArea < minSignedArea) & candidateExists;
                 minSignedArea = Vector.ConditionalSelect(isMinArea, signedArea, minSignedArea);
                 ConditionalSelect(isMinArea, candidate, contact2, out contact2);
-                var isMaxArea = Vector.BitwiseAnd(Vector.GreaterThan(signedArea, maxSignedArea), candidateExists);
+                var isMaxArea = (signedArea > maxSignedArea) & candidateExists;
                 maxSignedArea = Vector.ConditionalSelect(isMaxArea, signedArea, maxSignedArea);
                 ConditionalSelect(isMaxArea, candidate, contact3, out contact3);
             }
@@ -259,8 +259,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var epsilon = maxDistanceSquared * maxDistanceSquared * new Vector<float>(1e-6f);
             //Note that minSignedArea is guaranteed to be zero or lower by construction, so it's safe to square for magnitude comparison.
             //Note that these epsilons capture the case where there are two or less raw contacts.
-            contact2Exists = Vector.GreaterThan(minSignedArea * minSignedArea, epsilon);
-            contact3Exists = Vector.GreaterThan(maxSignedArea * maxSignedArea, epsilon);
+            contact2Exists = minSignedArea * minSignedArea > epsilon;
+            contact3Exists = maxSignedArea * maxSignedArea > epsilon;
         }
 
         public static void Reduce(ref ManifoldCandidate candidates, Vector<int> rawContactCount, int maxCandidateCount,

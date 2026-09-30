@@ -91,7 +91,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
             Vector3Wide.Length(localOffsetA, out var centerDistance);
             Vector3Wide.Scale(localOffsetA, Vector<float>.One / centerDistance, out var initialNormal);
-            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<float>(1e-8f));
+            var useInitialFallback = centerDistance < new Vector<float>(1e-8f);
             initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.X);
             initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
             initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
@@ -99,13 +99,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var cylinderSupportFinder = default(CylinderSupportFinder);
             var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
             b.EstimateEpsilonScale(inactiveLanes, out var hullEpsilonScale);
-            var epsilonScale = Vector.Min(Vector.Max(a.HalfLength, a.Radius), hullEpsilonScale);
+            var epsilonScale = Vector.Clamp(a.HalfLength, a.Radius, hullEpsilonScale);
             var depthThreshold = -speculativeMargin;
             DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
                 b, a, localOffsetA, hullLocalCylinderOrientation, ref hullSupportFinder, ref cylinderSupportFinder, initialNormal, inactiveLanes, 1e-5f * epsilonScale, depthThreshold,
                 out var depth, out var localNormal, out var closestOnHull);
 
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
+            inactiveLanes = inactiveLanes | (depth < depthThreshold);
             //Not every lane will generate contacts. Rather than requiring every lane to carefully clear all contactExists states, just clear them up front.
             manifold.Contact0Exists = default;
             manifold.Contact1Exists = default;
@@ -122,7 +122,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(closestOnHull, closestOnCylinderOffset, out var closestOnCylinder);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(localNormal, hullLocalCylinderOrientation, out var localNormalInA);
             var inverseLocalNormalDotCapNormal = Vector<float>.One / localNormalInA.Y;
-            var useCap = Vector.GreaterThan(Vector.Abs(localNormalInA.Y), new Vector<float>(0.70710678118f));
+            var useCap = Vector.Abs(localNormalInA.Y) > new Vector<float>(0.70710678118f);
             Unsafe.SkipInit(out Vector3Wide capCenter);
             Unsafe.SkipInit(out Vector2Wide interior0);
             Unsafe.SkipInit(out Vector2Wide interior1);
@@ -130,7 +130,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Unsafe.SkipInit(out Vector2Wide interior3);
             if (Vector.LessThanAny(Vector.AndNot(useCap, inactiveLanes), Vector<int>.Zero))
             {
-                var useBottom = Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero);
+                var useBottom = localNormalInA.Y > Vector<float>.Zero;
                 Vector3Wide.Scale(hullLocalCylinderOrientation.Y, Vector.ConditionalSelect(useBottom, -a.HalfLength, a.HalfLength), out capCenter);
                 Vector3Wide.Add(capCenter, localOffsetA, out capCenter);
 
@@ -140,7 +140,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
             Unsafe.SkipInit(out Vector3Wide cylinderSideEdgeCenter);
-            if (Vector.EqualsAny(Vector.BitwiseOr(useCap, inactiveLanes), Vector<int>.Zero))
+            if (Vector.EqualsAny(useCap | inactiveLanes, Vector<int>.Zero))
             {
                 //If the contact is on the cylinder's side, use the closestOnHull-derived position rather than resampling the support function with the local normal to avoid numerical noise.
                 Vector3Wide.Subtract(closestOnCylinder, localOffsetA, out var cylinderToClosestOnCylinder);

@@ -22,7 +22,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.CreateIdentity(out var identity);
             Vector3Wide.Length(localOffsetA, out var centerDistance);
             Vector3Wide.Scale(localOffsetA, Vector<float>.One / centerDistance, out var initialNormal);
-            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<float>(1e-8f));
+            var useInitialFallback = centerDistance < new Vector<float>(1e-8f);
             initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.X);
             initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
             initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
@@ -41,7 +41,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                       
             manifold.FeatureId = Vector<int>.Zero;
             manifold.Depth = depth;
-            manifold.ContactExists = Vector.GreaterThanOrEqual(manifold.Depth, -speculativeMargin);
+            manifold.ContactExists = manifold.Depth >= -speculativeMargin;
         }
 
         public static void Test(ref SphereWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)

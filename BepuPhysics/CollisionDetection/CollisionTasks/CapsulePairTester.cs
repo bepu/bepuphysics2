@@ -38,12 +38,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var absdadb = Vector.Abs(dadb);
             var bOntoAOffset = b.HalfLength * absdadb;
             var aOntoBOffset = a.HalfLength * absdadb;
-            var aMin = Vector.Max(-a.HalfLength, Vector.Min(a.HalfLength, daOffsetB - bOntoAOffset));
-            var aMax = Vector.Min(a.HalfLength, Vector.Max(-a.HalfLength, daOffsetB + bOntoAOffset));
-            var bMin = Vector.Max(-b.HalfLength, Vector.Min(b.HalfLength, -aOntoBOffset - dbOffsetB));
-            var bMax = Vector.Min(b.HalfLength, Vector.Max(-b.HalfLength, aOntoBOffset - dbOffsetB));
-            ta = Vector.Min(Vector.Max(ta, aMin), aMax);
-            tb = Vector.Min(Vector.Max(tb, bMin), bMax);
+            var aMin = Vector.Clamp(daOffsetB - bOntoAOffset, -a.HalfLength, a.HalfLength);
+            var aMax = Vector.Clamp(daOffsetB + bOntoAOffset, -a.HalfLength, a.HalfLength);
+            var bMin = Vector.Clamp(-aOntoBOffset - dbOffsetB, -b.HalfLength, b.HalfLength);
+            var bMax = Vector.Clamp(aOntoBOffset - dbOffsetB, -b.HalfLength, b.HalfLength);
+            ta = Vector.Clamp(ta, aMin, aMax);
+            tb = Vector.Clamp(tb, bMin, bMax);
 
             Vector3Wide.Scale(da, ta, out var closestPointOnA);
             Vector3Wide.Scale(db, tb, out var closestPointOnB);
@@ -55,7 +55,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Scale(manifold.Normal, inverseDistance, out manifold.Normal);
             //In the event that the line segments are touching, the normal doesn't exist and we need an alternative. Any direction along the local horizontal (XZ) plane of either capsule
             //is valid. (Normals along the local Y axes are not guaranteed to be as quick of a path to separation due to nonzero line length.)
-            var normalIsValid = Vector.GreaterThan(distance, new Vector<float>(1e-7f));
+            var normalIsValid = distance > new Vector<float>(1e-7f);
             Vector3Wide.ConditionalSelect(normalIsValid, manifold.Normal, xa, out manifold.Normal);
 
             //In the event that the two capsule axes are coplanar, we accept the whole interval as a source of contact.
@@ -69,14 +69,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.CrossWithoutOverlap(db, manifold.Normal, out var planeNormal);
             Vector3Wide.LengthSquared(planeNormal, out var planeNormalLengthSquared);
             Vector3Wide.Dot(da, planeNormal, out var numeratorUnsquared);
-            var squaredAngle = Vector.ConditionalSelect(Vector.LessThan(planeNormalLengthSquared, new Vector<float>(1e-10f)), Vector<float>.Zero, numeratorUnsquared * numeratorUnsquared / planeNormalLengthSquared);
+            var squaredAngle = Vector.ConditionalSelect(planeNormalLengthSquared < new Vector<float>(1e-10f), Vector<float>.Zero, numeratorUnsquared * numeratorUnsquared / planeNormalLengthSquared);
 
             //Convert the squared angle to a lerp parameter. For squared angle from 0 to lowerThreshold, we should use the full interval (1). From lowerThreshold to upperThreshold, lerp to 0.
             const float lowerThresholdAngle = 0.01f;
             const float upperThresholdAngle = 0.05f;
             const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
             const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
-            var intervalWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (new Vector<float>(upperThreshold) - squaredAngle) * new Vector<float>(1f / (upperThreshold - lowerThreshold))));
+            var intervalWeight = Vector.Clamp((new Vector<float>(upperThreshold) - squaredAngle) * new Vector<float>(1f / (upperThreshold - lowerThreshold)), Vector<float>.Zero, Vector<float>.One);
             //If the line segments intersect, even if they're coplanar, we would ideally stick to using a single point. Would be easy enough,
             //but we don't bother because it's such a weird and extremely temporary corner case. Not really worth handling.
             var weightedTa = ta - ta * intervalWeight;
@@ -98,11 +98,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(manifold.OffsetA1, offsetB, out var offsetB1);
             //Note potential division by zero. In that case, treat both projected points as the closest point. (Handled by the conditional select that chooses the previously computed distance.)
             var inverseDadb = Vector<float>.One / dadb;
-            var projectedTb0 = Vector.Max(bMin, Vector.Min(bMax, (aMin - daOffsetB) * inverseDadb));
-            var projectedTb1 = Vector.Max(bMin, Vector.Min(bMax, (aMax - daOffsetB) * inverseDadb));
+            var projectedTb0 = Vector.Clamp((aMin - daOffsetB) * inverseDadb, bMin, bMax);
+            var projectedTb1 = Vector.Clamp((aMax - daOffsetB) * inverseDadb, bMin, bMax);
             Vector3Wide.Dot(offsetB0, manifold.Normal, out var b0Normal);
             Vector3Wide.Dot(offsetB1, manifold.Normal, out var b1Normal);
-            var capsulesArePerpendicular = Vector.LessThan(Vector.Abs(dadb), new Vector<float>(1e-7f));
+            var capsulesArePerpendicular = Vector.Abs(dadb) < new Vector<float>(1e-7f);
             var distance0 = Vector.ConditionalSelect(capsulesArePerpendicular, distance, b0Normal - dbNormal * projectedTb0);
             var distance1 = Vector.ConditionalSelect(capsulesArePerpendicular, distance, b1Normal - dbNormal * projectedTb1);
             var combinedRadius = a.Radius + b.Radius;
@@ -119,10 +119,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.FeatureId0 = Vector<int>.Zero;
             manifold.FeatureId1 = Vector<int>.One;
             var minimumAcceptedDepth = -speculativeMargin;
-            manifold.Contact0Exists = Vector.GreaterThanOrEqual(manifold.Depth0, minimumAcceptedDepth);
-            manifold.Contact1Exists = Vector.BitwiseAnd(
-                Vector.GreaterThanOrEqual(manifold.Depth1, minimumAcceptedDepth),
-                Vector.GreaterThan(aMax - aMin, new Vector<float>(1e-7f) * a.HalfLength));
+            manifold.Contact0Exists = manifold.Depth0 >= minimumAcceptedDepth;
+            manifold.Contact1Exists = (manifold.Depth1 >= minimumAcceptedDepth) & (aMax - aMin > new Vector<float>(1e-7f) * a.HalfLength);
 
             //TODO: Since we added in the complexity of 2 contact support, this is probably large enough to benefit from working in the local space of one of the capsules.
             //Worth looking into later.

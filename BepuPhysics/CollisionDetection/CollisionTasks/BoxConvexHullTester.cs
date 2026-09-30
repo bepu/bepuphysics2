@@ -22,7 +22,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
             Vector3Wide.Length(localOffsetA, out var centerDistance);
             Vector3Wide.Scale(localOffsetA, Vector<float>.One / centerDistance, out var initialNormal);
-            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<float>(1e-8f));
+            var useInitialFallback = centerDistance < new Vector<float>(1e-8f);
             initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.X);
             initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
             initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
@@ -30,13 +30,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var boxSupportFinder = default(BoxSupportFinder);
             var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
             b.EstimateEpsilonScale(inactiveLanes, out var hullEpsilonScale);
-            var epsilonScale = Vector.Min(Vector.Max(a.HalfWidth, Vector.Max(a.HalfHeight, a.HalfLength)), hullEpsilonScale);
+            var epsilonScale = Vector.Min(Vector.Max(a.HalfWidth, a.HalfHeight, a.HalfLength), hullEpsilonScale);
             var depthThreshold = -speculativeMargin;
             DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth(
                 b, a, localOffsetA, hullLocalBoxOrientation, ref hullSupportFinder, ref boxSupportFinder, initialNormal, inactiveLanes, 1e-5f * epsilonScale, depthThreshold,
                 out var depth, out var localNormal, out var closestOnHull);
 
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
+            inactiveLanes = inactiveLanes | (depth < depthThreshold);
             //Not every lane will generate contacts. Rather than requiring every lane to carefully clear all contactExists states, just clear them up front.
             manifold.Contact0Exists = default;
             manifold.Contact1Exists = default;
@@ -52,8 +52,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Identify the box face.
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(localNormal, hullLocalBoxOrientation, out var localNormalInA);
             Vector3Wide.Abs(localNormalInA, out var absLocalNormalInA);
-            var useX = Vector.BitwiseAnd(Vector.GreaterThan(absLocalNormalInA.X, absLocalNormalInA.Y), Vector.GreaterThan(absLocalNormalInA.X, absLocalNormalInA.Z));
-            var useY = Vector.AndNot(Vector.GreaterThan(absLocalNormalInA.Y, absLocalNormalInA.Z), useX);
+            var useX = (absLocalNormalInA.X > absLocalNormalInA.Y) & (absLocalNormalInA.X > absLocalNormalInA.Z);
+            var useY = Vector.AndNot(absLocalNormalInA.Y > absLocalNormalInA.Z, useX);
             Vector3Wide.ConditionalSelect(useX, hullLocalBoxOrientation.X, hullLocalBoxOrientation.Z, out var boxFaceNormal);
             Vector3Wide.ConditionalSelect(useY, hullLocalBoxOrientation.Y, boxFaceNormal, out boxFaceNormal);
             Vector3Wide.ConditionalSelect(useX, hullLocalBoxOrientation.Y, hullLocalBoxOrientation.X, out var boxFaceX);
@@ -61,11 +61,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionalSelect(useX, hullLocalBoxOrientation.Z, hullLocalBoxOrientation.Y, out var boxFaceY);
             Vector3Wide.ConditionalSelect(useY, hullLocalBoxOrientation.X, boxFaceY, out boxFaceY);
             var negateFace =
-                Vector.ConditionalSelect(useX, Vector.GreaterThan(localNormalInA.X, Vector<float>.Zero),
-                Vector.ConditionalSelect(useY, Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero), Vector.GreaterThan(localNormalInA.Z, Vector<float>.Zero)));
+                Vector.ConditionalSelect(useX, localNormalInA.X > Vector<float>.Zero,
+                Vector.ConditionalSelect(useY, localNormalInA.Y > Vector<float>.Zero, localNormalInA.Z > Vector<float>.Zero));
             Vector3Wide.ConditionallyNegate(negateFace, ref boxFaceNormal);
             //Winding is important; flip the face bases if necessary.
-            Vector3Wide.ConditionallyNegate(Vector.OnesComplement(negateFace), ref boxFaceX);
+            Vector3Wide.ConditionallyNegate(~negateFace, ref boxFaceX);
             var boxFaceHalfWidth = Vector.ConditionalSelect(useX, a.HalfHeight, Vector.ConditionalSelect(useY, a.HalfLength, a.HalfWidth));
             var boxFaceHalfHeight = Vector.ConditionalSelect(useX, a.HalfLength, Vector.ConditionalSelect(useY, a.HalfWidth, a.HalfHeight));
             var boxFaceNormalOffset = Vector.ConditionalSelect(useX, a.HalfWidth, Vector.ConditionalSelect(useY, a.HalfHeight, a.HalfLength));

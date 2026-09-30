@@ -38,13 +38,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Dot(boundingPlaneBundle.Normal, slotClosestOnHull, out closestOnHullDot);
                 var candidateError = Vector.Abs(closestOnHullDot - boundingPlaneBundle.Offset);
                 var errorImprovement = bestPlaneErrorBundle - candidateError;
-                var useCandidate = Vector.BitwiseOr(
+                var useCandidate =
                     //If the plane error improvement is significant, use it.
-                    Vector.GreaterThanOrEqual(errorImprovement, slotBoundingPlaneEpsilonBundle), 
+                    (errorImprovement >= slotBoundingPlaneEpsilonBundle) |
                     //If the plane error improvement is small, then only use the candidate if it has a better aligned normal.
-                    Vector.BitwiseAnd(
-                        Vector.GreaterThan(errorImprovement, negatedSlotBoundingPlaneEpsilonBundle), 
-                        Vector.GreaterThan(dot, bestFaceDotBundle)));
+                    ((errorImprovement > negatedSlotBoundingPlaneEpsilonBundle) & (dot > bestFaceDotBundle));
                 bestFaceDotBundle = Vector.ConditionalSelect(useCandidate, dot, bestFaceDotBundle);
                 bestPlaneErrorBundle = Vector.ConditionalSelect(useCandidate, candidateError, bestPlaneErrorBundle);
                 bestIndices = Vector.ConditionalSelect(useCandidate, slotIndices, bestIndices);

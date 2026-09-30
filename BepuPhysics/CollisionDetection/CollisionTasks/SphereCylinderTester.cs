@@ -26,10 +26,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             horizontalOffsetLength = Vector.SquareRoot(cylinderLocalOffsetA.X * cylinderLocalOffsetA.X + cylinderLocalOffsetA.Z * cylinderLocalOffsetA.Z);
             inverseHorizontalOffsetLength = Vector<float>.One / horizontalOffsetLength;
             var horizontalClampMultiplier = b.Radius * inverseHorizontalOffsetLength;
-            var horizontalClampRequired = Vector.GreaterThan(horizontalOffsetLength, b.Radius);
+            var horizontalClampRequired = horizontalOffsetLength > b.Radius;
             Vector3Wide clampedSpherePositionLocalB;
             clampedSpherePositionLocalB.X = Vector.ConditionalSelect(horizontalClampRequired, cylinderLocalOffsetA.X * horizontalClampMultiplier, cylinderLocalOffsetA.X);
-            clampedSpherePositionLocalB.Y = Vector.Min(b.HalfLength, Vector.Max(-b.HalfLength, cylinderLocalOffsetA.Y));
+            clampedSpherePositionLocalB.Y = Vector.Clamp(cylinderLocalOffsetA.Y, -b.HalfLength, b.HalfLength);
             clampedSpherePositionLocalB.Z = Vector.ConditionalSelect(horizontalClampRequired, cylinderLocalOffsetA.Z * horizontalClampMultiplier, cylinderLocalOffsetA.Z);
 
             Vector3Wide.Add(clampedSpherePositionLocalB, cylinderLocalOffsetB, out sphereToClosestLocalB);
@@ -48,28 +48,28 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var absY = Vector.Abs(cylinderLocalOffsetA.Y);
             var depthY = b.HalfLength - absY;
             var horizontalDepth = b.Radius - horizontalOffsetLength;
-            var useDepthY = Vector.LessThanOrEqual(depthY, horizontalDepth);
-            var useTopCapNormal = Vector.GreaterThan(cylinderLocalOffsetA.Y, Vector<float>.Zero);
+            var useDepthY = depthY <= horizontalDepth;
+            var useTopCapNormal = cylinderLocalOffsetA.Y > Vector<float>.Zero;
             Vector3Wide localInternalNormal;
 
-            var useHorizontalFallback = Vector.LessThanOrEqual(horizontalOffsetLength, b.Radius * new Vector<float>(1e-5f));
+            var useHorizontalFallback = horizontalOffsetLength <= b.Radius * new Vector<float>(1e-5f);
             localInternalNormal.X = Vector.ConditionalSelect(useDepthY, Vector<float>.Zero, Vector.ConditionalSelect(useHorizontalFallback, Vector<float>.One, cylinderLocalOffsetA.X * inverseHorizontalOffsetLength));
-            localInternalNormal.Y = Vector.ConditionalSelect(useDepthY, Vector.ConditionalSelect(useTopCapNormal, Vector<float>.One, new Vector<float>(-1)), Vector<float>.Zero);
+            localInternalNormal.Y = Vector.ConditionalSelect(useDepthY, Vector.ConditionalSelect(useTopCapNormal, Vector<float>.One, Vector<float>.NegativeOne), Vector<float>.Zero);
             localInternalNormal.Z = Vector.ConditionalSelect(useDepthY, Vector<float>.Zero, Vector.ConditionalSelect(useHorizontalFallback, Vector<float>.Zero, cylinderLocalOffsetA.Z * inverseHorizontalOffsetLength));
 
             Vector3Wide.Length(sphereToContactLocalB, out var contactDistanceFromSphereCenter);
             //Note negation; normal points from B to A by convention.
-            Vector3Wide.Scale(sphereToContactLocalB, new Vector<float>(-1) / contactDistanceFromSphereCenter, out var localExternalNormal);
+            Vector3Wide.Scale(sphereToContactLocalB, Vector<float>.NegativeOne / contactDistanceFromSphereCenter, out var localExternalNormal);
 
             //Can't rely on the external normal if the sphere is so close to the surface that the normal isn't numerically computable.
-            var useInternal = Vector.LessThan(contactDistanceFromSphereCenter, new Vector<float>(1e-7f));
+            var useInternal = contactDistanceFromSphereCenter < new Vector<float>(1e-7f);
             Vector3Wide.ConditionalSelect(useInternal, localInternalNormal, localExternalNormal, out var localNormal);
 
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, orientationMatrixB, out manifold.Normal);
 
             manifold.FeatureId = Vector<int>.Zero;
             manifold.Depth = Vector.ConditionalSelect(useInternal, Vector.ConditionalSelect(useDepthY, depthY, horizontalDepth), -contactDistanceFromSphereCenter) + a.Radius;
-            manifold.ContactExists = Vector.GreaterThanOrEqual(manifold.Depth, -speculativeMargin);
+            manifold.ContactExists = manifold.Depth >= -speculativeMargin;
         }
 
         public static void Test(ref SphereWide a, ref CylinderWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)

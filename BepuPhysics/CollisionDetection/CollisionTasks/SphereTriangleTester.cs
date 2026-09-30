@@ -20,7 +20,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void Select(ref Vector<float> distanceSquared, ref Vector3Wide localNormal, ref Vector<float> distanceSquaredCandidate, ref Vector3Wide localNormalCandidate)
         {
-            var useCandidate = Vector.LessThan(distanceSquaredCandidate, distanceSquared);
+            var useCandidate = distanceSquaredCandidate < distanceSquared;
             distanceSquared = Vector.Min(distanceSquaredCandidate, distanceSquared);
             Vector3Wide.ConditionalSelect(useCandidate, localNormalCandidate, localNormal, out localNormal);
         }
@@ -60,15 +60,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(acxpa, localTriangleNormal, out var edgePlaneTestAC);
             var edgePlaneTestBC = Vector<float>.One - (edgePlaneTestAB + edgePlaneTestAC) * inverseTriangleNormalLength;
 
-            var outsideAB = Vector.LessThan(edgePlaneTestAB, Vector<float>.Zero);
-            var outsideAC = Vector.LessThan(edgePlaneTestAC, Vector<float>.Zero);
-            var outsideBC = Vector.LessThan(edgePlaneTestBC, Vector<float>.Zero);
+            var outsideAB = edgePlaneTestAB < Vector<float>.Zero;
+            var outsideAC = edgePlaneTestAC < Vector<float>.Zero;
+            var outsideBC = edgePlaneTestBC < Vector<float>.Zero;
 
-            var outsideAnyEdge = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideAC, outsideBC));
+            var outsideAnyEdge = outsideAB | outsideAC | outsideBC;
             Unsafe.SkipInit(out Vector3Wide localClosestOnTriangle);
-            var negativeOne = new Vector<int>(-1);
+            var negativeOne = Vector<int>.AllBitsSet;
             var activeLanes = BundleIndexing.CreateMaskForCountInBundle(pairCount);
-            if (Vector.EqualsAny(Vector.BitwiseAnd(activeLanes, outsideAnyEdge), negativeOne))
+            if (Vector.EqualsAny(activeLanes & outsideAnyEdge, negativeOne))
             {
                 //At least one lane detected a point outside of the triangle. Choose one edge which is outside as the representative.
                 Vector3Wide.ConditionalSelect(outsideAC, ac, ab, out var edgeDirection);
@@ -80,7 +80,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //This does some partially redundant work if the edge is AB or AC, but given that we didn't have bcbc or bcpb, it's fine.
                 Vector3Wide.Dot(negativeEdgeStartToP, edgeDirection, out var negativeOffsetDotEdge);
                 Vector3Wide.Dot(edgeDirection, edgeDirection, out var edgeDotEdge);
-                var edgeScale = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, -negativeOffsetDotEdge / edgeDotEdge));
+                var edgeScale = Vector.Clamp(-negativeOffsetDotEdge / edgeDotEdge, Vector<float>.Zero, Vector<float>.One);
                 Vector3Wide.Scale(edgeDirection, edgeScale, out var pointOnEdge);
                 Vector3Wide.Add(edgeStart, pointOnEdge, out pointOnEdge);
 
@@ -104,20 +104,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(manifold.OffsetA, offsetB, out manifold.OffsetA);
             Vector3Wide.Length(manifold.OffsetA, out var distance);
             //Note the normal is calibrated to point from B to A.
-            var normalScale = new Vector<float>(-1) / distance;
+            var normalScale = Vector<float>.NegativeOne / distance;
             Vector3Wide.Scale(manifold.OffsetA, normalScale, out manifold.Normal);
             manifold.Depth = a.Radius - distance;
             //In the event that the sphere's center point is touching the triangle, the normal is undefined. In that case, the 'correct' normal would be the triangle's normal.
             //However, given that this is a pretty rare degenerate case and that we already treat triangle backfaces as noncolliding, we'll treat zero distance as a backface non-collision.
             Vector3Wide.Dot(localTriangleNormal, manifold.Normal, out var faceNormalDotLocalNormal);
             TriangleWide.ComputeNondegenerateTriangleMask(ab, ac, triangleNormalLength, out _, out var nondegenerateMask);
-            manifold.ContactExists = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(
-                    Vector.GreaterThan(distance, Vector<float>.Zero),
-                    nondegenerateMask),
-                Vector.BitwiseAnd(
-                    Vector.LessThanOrEqual(faceNormalDotLocalNormal, new Vector<float>(-TriangleWide.BackfaceNormalDotRejectionThreshold)),
-                    Vector.GreaterThanOrEqual(manifold.Depth, -speculativeMargin)));
+            manifold.ContactExists = (distance > Vector<float>.Zero) &
+                nondegenerateMask &
+                ((faceNormalDotLocalNormal <= new Vector<float>(-TriangleWide.BackfaceNormalDotRejectionThreshold)) &
+                    (manifold.Depth >= -speculativeMargin));
         }
 
         public static void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)

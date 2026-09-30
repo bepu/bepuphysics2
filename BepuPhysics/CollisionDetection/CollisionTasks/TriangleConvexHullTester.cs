@@ -46,7 +46,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //Check if the hull's position is within the triangle and below the triangle plane. If so, we can ignore it.
             Vector3Wide.Dot(triangleNormal, localTriangleCenter, out var hullToTriangleCenterDot);
-            var hullBelowPlane = Vector.GreaterThanOrEqual(hullToTriangleCenterDot, Vector<float>.Zero);
+            var hullBelowPlane = hullToTriangleCenterDot >= Vector<float>.Zero;
             Vector3Wide.CrossWithoutOverlap(triangleAB, triangleNormal, out var edgePlaneAB);
             Vector3Wide.CrossWithoutOverlap(triangleBC, triangleNormal, out var edgePlaneBC);
             Vector3Wide.CrossWithoutOverlap(triangleCA, triangleNormal, out var edgePlaneCA);
@@ -54,17 +54,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(edgePlaneBC, triangleB, out var bcPlaneTest);
             Vector3Wide.Dot(edgePlaneCA, triangleC, out var caPlaneTest);
             var hullInsideTriangleEdgePlanes =
-                Vector.BitwiseAnd(Vector.LessThanOrEqual(abPlaneTest, Vector<float>.Zero),
-                    Vector.BitwiseAnd(Vector.LessThanOrEqual(bcPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(caPlaneTest, Vector<float>.Zero)));
-            var hullInsideAndBelowTriangle = Vector.BitwiseAnd(hullBelowPlane, hullInsideTriangleEdgePlanes);
+                (abPlaneTest <= Vector<float>.Zero) &
+                    ((bcPlaneTest <= Vector<float>.Zero) & (caPlaneTest <= Vector<float>.Zero));
+            var hullInsideAndBelowTriangle = hullBelowPlane & hullInsideTriangleEdgePlanes;
 
             var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
             TriangleWide.ComputeNondegenerateTriangleMask(triangleAB, triangleCA, triangleNormalLength, out var triangleEpsilonScale, out var nondegenerateMask);
             b.EstimateEpsilonScale(inactiveLanes, out var hullEpsilonScale);
             var epsilonScale = Vector.Min(triangleEpsilonScale, hullEpsilonScale);
             //Note that degenerate triangles will not contribute contacts. They don't have a well defined normal.
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.OnesComplement(nondegenerateMask));
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, hullInsideAndBelowTriangle);
+            inactiveLanes = inactiveLanes | ~nondegenerateMask;
+            inactiveLanes = inactiveLanes | hullInsideAndBelowTriangle;
             //Not every lane will generate contacts. Rather than requiring every lane to carefully clear all contactExists states, just clear them up front.
             manifold.Contact0Exists = default;
             manifold.Contact1Exists = default;
@@ -82,7 +82,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //could be the initial normal.
             Vector3Wide.Length(localTriangleCenter, out var centerDistance);
             Vector3Wide.Scale(localTriangleCenter, Vector<float>.One / centerDistance, out var initialNormal);
-            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<float>(1e-10f));
+            var useInitialFallback = centerDistance < new Vector<float>(1e-10f);
             initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.X);
             initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
             initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
@@ -104,16 +104,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(edgePlaneCA, closestToC, out var extremeCAPlaneTest);
             //Note that the triangle face extreme point can only be trusted if the hull's center is above the triangle's surface *AND* contained within the edge normals.
             //Merely being above the surface is insufficient- imagine a hull off to the side of the triangle, wedged beneath it.
-            var triangleNormalIsMinimal = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(
-                    Vector.AndNot(hullInsideTriangleEdgePlanes, hullBelowPlane),
-                    Vector.LessThanOrEqual(extremeABPlaneTest, Vector<float>.Zero)),
-                Vector.BitwiseAnd(
-                    Vector.LessThanOrEqual(extremeBCPlaneTest, Vector<float>.Zero),
-                    Vector.LessThanOrEqual(extremeCAPlaneTest, Vector<float>.Zero)));
+            var triangleNormalIsMinimal =
+                (Vector.AndNot(hullInsideTriangleEdgePlanes, hullBelowPlane) & (extremeABPlaneTest <= Vector<float>.Zero)) &
+                    ((extremeBCPlaneTest <= Vector<float>.Zero) & (extremeCAPlaneTest <= Vector<float>.Zero));
 
             var depthThreshold = -speculativeMargin;
-            var skipDepthRefine = Vector.BitwiseOr(triangleNormalIsMinimal, inactiveLanes);
+            var skipDepthRefine = triangleNormalIsMinimal | inactiveLanes;
             Vector3Wide localNormal, closestOnHull;
             Vector<float> depth;
             if (Vector.EqualsAny(skipDepthRefine, Vector<int>.Zero))
@@ -136,7 +132,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
 
             Vector3Wide.Dot(triangleNormal, localNormal, out var triangleNormalDotLocalNormal);
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThan(triangleNormalDotLocalNormal, new Vector<float>(-TriangleWide.BackfaceNormalDotRejectionThreshold)), Vector.LessThan(depth, depthThreshold)));
+            inactiveLanes = inactiveLanes | ((triangleNormalDotLocalNormal > new Vector<float>(-TriangleWide.BackfaceNormalDotRejectionThreshold)) | (depth < depthThreshold));
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //No contacts generated.
@@ -428,7 +424,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, hullOrientation, out manifold.Normal);
             //Mesh reductions also make use of a face contact flag in the feature id.
             var faceCollisionFlag = Vector.ConditionalSelect(
-                Vector.LessThan(triangleNormalDotLocalNormal, new Vector<float>(-MeshReduction.MinimumDotForFaceCollision)), new Vector<int>(MeshReduction.FaceCollisionFlag), Vector<int>.Zero);
+                triangleNormalDotLocalNormal < new Vector<float>(-MeshReduction.MinimumDotForFaceCollision), new Vector<int>(MeshReduction.FaceCollisionFlag), Vector<int>.Zero);
             manifold.FeatureId0 += faceCollisionFlag;
         }
 

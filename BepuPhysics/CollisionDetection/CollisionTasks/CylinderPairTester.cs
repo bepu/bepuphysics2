@@ -60,7 +60,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             tMin = tBase - tOffset;
             tMax = tBase + tOffset;
             //If the projected line direction is zero, just compress the interval to tBase.
-            var useFallback = Vector.LessThan(Vector.Abs(a), new Vector<float>(1e-12f));
+            var useFallback = Vector.Abs(a) < new Vector<float>(1e-12f);
             tMin = Vector.ConditionalSelect(useFallback, tBase, tMin);
             tMax = Vector.ConditionalSelect(useFallback, tBase, tMax);
         }
@@ -89,7 +89,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             depth = tDistance * inverseFeatureNormalADotLocalNormal;
             Vector3Wide.Add(contact, localOffsetB, out var localAToContact);
             Matrix3x3Wide.TransformWithoutOverlap(localAToContact, orientationB, out aToContact);
-            contactExists = Vector.BitwiseAnd(contactExists, Vector.GreaterThanOrEqual(depth, negativeSpeculativeMargin));
+            contactExists &= depth >= negativeSpeculativeMargin;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -139,7 +139,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Vector3Wide.Length(localOffsetA, out var length);
             Vector3Wide.Scale(localOffsetA, Vector<float>.One / length, out var localNormal);
-            var useInitialSampleFallback = Vector.LessThan(length, new Vector<float>(1e-10f));
+            var useInitialSampleFallback = length < new Vector<float>(1e-10f);
             localNormal.X = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.X);
             localNormal.Y = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.One, localNormal.Y);
             localNormal.Z = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.Z);
@@ -158,7 +158,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), depthThreshold,
                 out var depth, out localNormal, out var closestOnB, maximumIterations: 25);
 
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
+            inactiveLanes = inactiveLanes | (depth < depthThreshold);
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //All lanes are either inactive or were found to have a depth lower than the speculative margin, so we can just quit early.
@@ -175,13 +175,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(rA.Y, localNormal, out var nDotAY);
             var inverseNDotAY = Vector<float>.One / nDotAY;
             var inverseLocalNormalY = Vector<float>.One / localNormal.Y;
-            Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.GreaterThan(nDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var capCenterA);
+            Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(nDotAY > Vector<float>.Zero, -a.HalfLength, a.HalfLength), out var capCenterA);
             Vector3Wide.Add(capCenterA, localOffsetA, out capCenterA);
-            var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
+            var capCenterBY = Vector.ConditionalSelect(localNormal.Y < Vector<float>.Zero, -b.HalfLength, b.HalfLength);
 
             var capThreshold = new Vector<float>(0.70710678118f);
-            var useCapA = Vector.GreaterThan(Vector.Abs(nDotAY), capThreshold);
-            var useCapB = Vector.GreaterThan(Vector.Abs(localNormal.Y), capThreshold);
+            var useCapA = Vector.Abs(nDotAY) > capThreshold;
+            var useCapB = Vector.Abs(localNormal.Y) > capThreshold;
             Unsafe.SkipInit(out Vector3Wide contact0);
             Unsafe.SkipInit(out Vector3Wide contact1);
             Unsafe.SkipInit(out Vector3Wide contact2);
@@ -190,7 +190,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.Contact1Exists = default;
             manifold.Contact2Exists = default;
             manifold.Contact3Exists = default;
-            var useCapCap = Vector.AndNot(Vector.BitwiseAnd(useCapA, useCapB), inactiveLanes);
+            var useCapCap = Vector.AndNot(useCapA & useCapB, inactiveLanes);
 
             //The extreme points along the contact normal are shared between multiple contact generator paths, so we just do them up front.
             Vector3Wide.Scale(localNormal, -depth, out var bToAOffset);
@@ -204,7 +204,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             extremeB.X = closestOnB.X;
             extremeB.Y = closestOnB.Z;
 
-            var useNegative = Vector.GreaterThan(nDotAY, Vector<float>.Zero);
+            var useNegative = nDotAY > Vector<float>.Zero;
             Vector3Wide capFeatureNormalA;
             capFeatureNormalA.X = Vector.ConditionalSelect(useNegative, -rA.Y.X, rA.Y.X);
             capFeatureNormalA.Y = Vector.ConditionalSelect(useNegative, -rA.Y.Y, rA.Y.Y);
@@ -229,22 +229,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var inverseParallelInterpolationSpan = new Vector<float>(inverseParallelInterpolationSpanScalar);
                 var absADot = Vector.Abs(nDotAY);
                 var absBDot = Vector.Abs(localNormal.Y);
-                var aCapNotParallel = Vector.LessThan(absADot, parallelThreshold);
-                var bCapNotParallel = Vector.LessThan(absBDot, parallelThreshold);
+                var aCapNotParallel = absADot < parallelThreshold;
+                var bCapNotParallel = absBDot < parallelThreshold;
 
                 //If both caps are not parallel, we'll use the deepest point on B.
                 Vector2Wide capContact0 = extremeB;
 
                 //Only use one contact if neither cap face is involved.
-                var bothNotParallel = Vector.BitwiseAnd(aCapNotParallel, bCapNotParallel);
-                if (Vector.LessThanAny(Vector.AndNot(Vector.OnesComplement(bothNotParallel), inactiveLanes), Vector<int>.Zero))
+                var bothNotParallel = aCapNotParallel & bCapNotParallel;
+                if (Vector.LessThanAny(Vector.AndNot(~bothNotParallel, inactiveLanes), Vector<int>.Zero))
                 {
                     //The local normal is aligned with at least one of the two cap normals.     
                     ProjectOntoCapB(capCenterBY, inverseLocalNormalY, localNormal, capCenterA, out var capCenterAOnB);
                     Vector2Wide.Length(capCenterAOnB, out var horizontalOffsetLength);
                     var inverseHorizontalOffsetLength = Vector<float>.One / horizontalOffsetLength;
                     Vector2Wide.Scale(capCenterAOnB, inverseHorizontalOffsetLength, out var horizontalOffsetDirection);
-                    var useBothParallelFallback = Vector.LessThan(horizontalOffsetLength, new Vector<float>(1e-14f));
+                    var useBothParallelFallback = horizontalOffsetLength < new Vector<float>(1e-14f);
                     horizontalOffsetDirection.X = Vector.ConditionalSelect(useBothParallelFallback, Vector<float>.One, horizontalOffsetDirection.X);
                     horizontalOffsetDirection.Y = Vector.ConditionalSelect(useBothParallelFallback, Vector<float>.Zero, horizontalOffsetDirection.Y);
                     Vector2Wide.Scale(horizontalOffsetDirection, b.Radius, out var initialLineStart);
@@ -268,7 +268,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //at point where it would find the A-B circle intersections, or at the midpoint of A if the circle intersections are further out.
                     //Note that for not-entirely-parallel faces, it won't quite match up with the true intersections since the projected cap of A is an ellipse.
                     var circleIntersectionT = 0.5f * (horizontalOffsetLength + (b.Radius * b.Radius - a.Radius * a.Radius) * inverseHorizontalOffsetLength);
-                    var secondLineStartT = Vector.Min(horizontalOffsetLength, Vector.Max(Vector<float>.Zero, circleIntersectionT));
+                    var secondLineStartT = Vector.Clamp(circleIntersectionT, Vector<float>.Zero, horizontalOffsetLength);
                     Vector2Wide.Scale(horizontalOffsetDirection, secondLineStartT, out var secondLineStartOnB);
                     Vector2Wide secondLineDirectionOnB;
                     secondLineDirectionOnB.X = horizontalOffsetDirection.Y;
@@ -291,19 +291,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                     //We've built everything assuming perfectly parallel caps. The manifold we have so far may not include the deepest points.
                     //Replace one of the four points with the deepest point (extremeB) if necessary.
-                    var weightAParallel = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (absADot - parallelThreshold) * inverseParallelInterpolationSpan));
-                    var weightBParallel = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (absBDot - parallelThreshold) * inverseParallelInterpolationSpan));
+                    var weightAParallel = Vector.Clamp((absADot - parallelThreshold) * inverseParallelInterpolationSpan, Vector<float>.Zero, Vector<float>.One);
+                    var weightBParallel = Vector.Clamp((absBDot - parallelThreshold) * inverseParallelInterpolationSpan, Vector<float>.Zero, Vector<float>.One);
                     var parallelWeight = weightAParallel * weightBParallel;
                     var extremeWeight = Vector<float>.One - parallelWeight;
                     Vector2Wide.Subtract(extremeB, secondLineStartOnB, out var manifoldCenterToExtremeB);
                     var replaceDot0 = horizontalOffsetDirection.X * manifoldCenterToExtremeB.X + horizontalOffsetDirection.Y * manifoldCenterToExtremeB.Y;
                     var replaceDot2 = secondLineDirectionOnB.X * manifoldCenterToExtremeB.X + secondLineDirectionOnB.Y * manifoldCenterToExtremeB.Y;
-                    var replace0Or1 = Vector.GreaterThan(Vector.Abs(replaceDot0), Vector.Abs(replaceDot2));
+                    var replace0Or1 = Vector.Abs(replaceDot0) > Vector.Abs(replaceDot2);
                     //var replace0 = Vector.BitwiseAnd(Vector.GreaterThan(replaceDot0, Vector<float>.Zero), replace0Or1);
-                    var replace0 = Vector.BitwiseOr(bothNotParallel, Vector.BitwiseAnd(Vector.GreaterThan(replaceDot0, Vector<float>.Zero), replace0Or1));
-                    var replace1 = Vector.BitwiseAnd(Vector.LessThanOrEqual(replaceDot0, Vector<float>.Zero), replace0Or1);
-                    var replace2 = Vector.AndNot(Vector.LessThan(replaceDot2, Vector<float>.Zero), replace0Or1);
-                    var replace3 = Vector.AndNot(Vector.GreaterThanOrEqual(replaceDot2, Vector<float>.Zero), replace0Or1);
+                    var replace0 = bothNotParallel | ((replaceDot0 > Vector<float>.Zero) & replace0Or1);
+                    var replace1 = (replaceDot0 <= Vector<float>.Zero) & replace0Or1;
+                    var replace2 = Vector.AndNot(replaceDot2 < Vector<float>.Zero, replace0Or1);
+                    var replace3 = Vector.AndNot(replaceDot2 >= Vector<float>.Zero, replace0Or1);
                     capContact0.X = Vector.ConditionalSelect(replace0, extremeB.X * extremeWeight + capContact0.X * parallelWeight, capContact0.X);
                     capContact0.Y = Vector.ConditionalSelect(replace0, extremeB.Y * extremeWeight + capContact0.Y * parallelWeight, capContact0.Y);
                     capContact1.X = Vector.ConditionalSelect(replace1, extremeB.X * extremeWeight + capContact1.X * parallelWeight, capContact1.X);
@@ -317,15 +317,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     FromCapBTo3D(capContact1, capCenterBY, out contact1);
                     FromCapBTo3D(capContact2, capCenterBY, out contact2);
                     FromCapBTo3D(capContact3, capCenterBY, out contact3);
-                    manifold.Contact1Exists = Vector.AndNot(Vector.BitwiseAnd(useCapCap, Vector.GreaterThan(firstLineTMax, firstLineTMin)), bothNotParallel);
+                    manifold.Contact1Exists = Vector.AndNot(useCapCap & (firstLineTMax > firstLineTMin), bothNotParallel);
                     //If 0 and 1 are in the same spot, there aren't going to be any useful additional contacts.
                     manifold.Contact2Exists = manifold.Contact1Exists;
-                    manifold.Contact3Exists = Vector.BitwiseAnd(manifold.Contact1Exists, Vector.GreaterThan(secondLineTMax, secondLineTMin));
+                    manifold.Contact3Exists = manifold.Contact1Exists & (secondLineTMax > secondLineTMin);
                 }
                 FromCapBTo3D(capContact0, capCenterBY, out contact0);
                 manifold.Contact0Exists = useCapCap;
             }
-            var useCapSide = Vector.AndNot(Vector.BitwiseOr(Vector.AndNot(useCapA, useCapB), Vector.AndNot(useCapB, useCapA)), inactiveLanes);
+            var useCapSide = Vector.AndNot(Vector.AndNot(useCapA, useCapB) | Vector.AndNot(useCapB, useCapA), inactiveLanes);
             //The side normal is used in both of the following contact generator cases.
             Vector3Wide.Dot(rA.X, localNormal, out var ax);
             Vector3Wide.Dot(rA.Z, localNormal, out var az);
@@ -368,7 +368,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var sideHalfLength = Vector.ConditionalSelect(useCapA, b.HalfLength, a.HalfLength);
                 Vector2Wide.Subtract(projectedLineEnd, projectedLineStart, out var projectedLineDirection);
                 IntersectLineCircle(projectedLineStart, projectedLineDirection, radius, out var tMin, out var tMax);
-                tMin = Vector.Min(sideHalfLength, Vector.Max(-sideHalfLength, tMin));
+                tMin = Vector.Clamp(tMin, -sideHalfLength, sideHalfLength);
                 tMax = Vector.Min(sideHalfLength, tMax);
 
                 //To be consistent with the other contact generation cases, we want contacts to be on cylinder B. So:
@@ -396,8 +396,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionalSelect(useCapA, contact1ForCapA, contact1ForCapB, out var capSideContact1);
                 Vector3Wide.ConditionalSelect(useCapSide, capSideContact0, contact0, out contact0);
                 Vector3Wide.ConditionalSelect(useCapSide, capSideContact1, contact1, out contact1);
-                manifold.Contact0Exists = Vector.ConditionalSelect(useCapSide, new Vector<int>(-1), manifold.Contact0Exists);
-                manifold.Contact1Exists = Vector.ConditionalSelect(useCapSide, Vector.GreaterThan(tMax, tMin), manifold.Contact1Exists);
+                manifold.Contact0Exists = Vector.ConditionalSelect(useCapSide, Vector<int>.AllBitsSet, manifold.Contact0Exists);
+                manifold.Contact1Exists = Vector.ConditionalSelect(useCapSide, tMax > tMin, manifold.Contact1Exists);
 
                 Vector3Wide.ConditionalSelect(useCapA, capFeatureNormalA, sideFeatureNormalA, out var capSideFeatureNormalA);
                 Vector3Wide.ConditionalSelect(useCapSide, capSideFeatureNormalA, featureNormalA, out featureNormalA);
@@ -405,7 +405,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionalSelect(useCapA, capCenterA, sideCenterA, out var capSideFeaturePositionA);
                 Vector3Wide.ConditionalSelect(useCapSide, capSideFeaturePositionA, featurePositionA, out featurePositionA);
             }
-            var useSideSide = Vector.AndNot(Vector.AndNot(Vector.OnesComplement(useCapA), useCapB), inactiveLanes);
+            var useSideSide = Vector.AndNot(Vector.AndNot(~useCapA, useCapB), inactiveLanes);
             if (Vector.LessThanAny(useSideSide, Vector<int>.Zero))
             {
                 //At least one lane needs side-side contacts.
@@ -423,8 +423,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 contact1.X = Vector.ConditionalSelect(useSideSide, extremeB.X, contact1.X);
                 contact1.Y = Vector.ConditionalSelect(useSideSide, contactTMax, contact1.Y);
                 contact1.Z = Vector.ConditionalSelect(useSideSide, extremeB.Y, contact1.Z);
-                manifold.Contact0Exists = Vector.ConditionalSelect(useSideSide, new Vector<int>(-1), manifold.Contact0Exists);
-                manifold.Contact1Exists = Vector.ConditionalSelect(useSideSide, Vector.GreaterThan(contactTMax, contactTMin), manifold.Contact1Exists);
+                manifold.Contact0Exists = Vector.ConditionalSelect(useSideSide, Vector<int>.AllBitsSet, manifold.Contact0Exists);
+                manifold.Contact1Exists = Vector.ConditionalSelect(useSideSide, contactTMax > contactTMin, manifold.Contact1Exists);
                 Vector3Wide.ConditionalSelect(useSideSide, sideFeatureNormalA, featureNormalA, out featureNormalA);
                 Vector3Wide.ConditionalSelect(useSideSide, sideCenterA, featurePositionA, out featurePositionA);
             }

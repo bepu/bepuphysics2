@@ -25,9 +25,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Those offsets differ only by their sign, so are equivalent due to the symmetry of the box. The negation is left implicit.
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, orientationMatrixB, out var localOffsetB);
             Vector3Wide clampedLocalOffsetB;
-            clampedLocalOffsetB.X = Vector.Min(Vector.Max(localOffsetB.X, -b.HalfWidth), b.HalfWidth);
-            clampedLocalOffsetB.Y = Vector.Min(Vector.Max(localOffsetB.Y, -b.HalfHeight), b.HalfHeight);
-            clampedLocalOffsetB.Z = Vector.Min(Vector.Max(localOffsetB.Z, -b.HalfLength), b.HalfLength);
+            clampedLocalOffsetB.X = Vector.Clamp(localOffsetB.X, -b.HalfWidth, b.HalfWidth);
+            clampedLocalOffsetB.Y = Vector.Clamp(localOffsetB.Y, -b.HalfHeight, b.HalfHeight);
+            clampedLocalOffsetB.Z = Vector.Clamp(localOffsetB.Z, -b.HalfLength, b.HalfLength);
             //Implicit negation to make the normal point from B to A, following convention.
             Vector3Wide.Subtract(clampedLocalOffsetB, localOffsetB, out var outsideNormal);
             Vector3Wide.Length(outsideNormal, out var distance);
@@ -39,16 +39,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var depthX = b.HalfWidth - Vector.Abs(localOffsetB.X);
             var depthY = b.HalfHeight - Vector.Abs(localOffsetB.Y);
             var depthZ = b.HalfLength - Vector.Abs(localOffsetB.Z);
-            var insideDepth = Vector.Min(depthX, Vector.Min(depthY, depthZ));
+            var insideDepth = Vector.Min(depthX, depthY, depthZ);
             //Only one axis may have a nonzero component.
             var useX = Vector.Equals(insideDepth, depthX);
             var useY = Vector.AndNot(Vector.Equals(insideDepth, depthY), useX);
-            var useZ = Vector.OnesComplement(Vector.BitwiseOr(useX, useY));
+            var useZ = ~(useX | useY);
             Vector3Wide insideNormal;
             //A faster sign test would be nice.
-            insideNormal.X = Vector.ConditionalSelect(useX, Vector.ConditionalSelect(Vector.LessThan(localOffsetB.X, Vector<float>.Zero), new Vector<float>(1f), new Vector<float>(-1f)), Vector<float>.Zero);
-            insideNormal.Y = Vector.ConditionalSelect(useY, Vector.ConditionalSelect(Vector.LessThan(localOffsetB.Y, Vector<float>.Zero), new Vector<float>(1f), new Vector<float>(-1f)), Vector<float>.Zero);
-            insideNormal.Z = Vector.ConditionalSelect(useZ, Vector.ConditionalSelect(Vector.LessThan(localOffsetB.Z, Vector<float>.Zero), new Vector<float>(1f), new Vector<float>(-1f)), Vector<float>.Zero);
+            insideNormal.X = Vector.ConditionalSelect(useX, Vector.ConditionalSelect(localOffsetB.X < Vector<float>.Zero, Vector<float>.One, Vector<float>.NegativeOne), Vector<float>.Zero);
+            insideNormal.Y = Vector.ConditionalSelect(useY, Vector.ConditionalSelect(localOffsetB.Y < Vector<float>.Zero, Vector<float>.One, Vector<float>.NegativeOne), Vector<float>.Zero);
+            insideNormal.Z = Vector.ConditionalSelect(useZ, Vector.ConditionalSelect(localOffsetB.Z < Vector<float>.Zero, Vector<float>.One, Vector<float>.NegativeOne), Vector<float>.Zero);
 
             insideDepth += a.Radius;
             var useInside = Vector.Equals(distance, Vector<float>.Zero);
@@ -61,7 +61,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //For capsule-sphere, this can be computed from the normal and depth.
             var negativeOffsetFromSphere = manifold.Depth * 0.5f - a.Radius;
             Vector3Wide.Scale(manifold.Normal, negativeOffsetFromSphere, out manifold.OffsetA);
-            manifold.ContactExists = Vector.GreaterThan(manifold.Depth, -speculativeMargin);
+            manifold.ContactExists = manifold.Depth > -speculativeMargin;
         }
 
         public static void Test(ref SphereWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)

@@ -21,7 +21,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
             Vector3Wide.Length(localOffsetA, out var centerDistance);
             Vector3Wide.Scale(localOffsetA, Vector<float>.One / centerDistance, out var initialNormal);
-            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<float>(1e-8f));
+            var useInitialFallback = centerDistance < new Vector<float>(1e-8f);
             initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.X);
             initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
             initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
@@ -35,7 +35,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 b, a, localOffsetA, hullLocalCapsuleOrientation, ref hullSupportFinder, ref capsuleSupportFinder, initialNormal, inactiveLanes, 1e-5f * epsilonScale, depthThreshold,
                 out var depth, out var localNormal, out var closestOnHull);
 
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
+            inactiveLanes = inactiveLanes | (depth < depthThreshold);
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //No contacts generated.
@@ -141,8 +141,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var tEntry = latestEntryNumeratorBundle / latestEntryDenominatorBundle;
             var tExit = earliestExitNumeratorBundle / earliestExitDenominatorBundle;
             var negatedHalfLength = -a.HalfLength;
-            tEntry = Vector.Max(negatedHalfLength, Vector.Min(a.HalfLength, tEntry));
-            tExit = Vector.Max(negatedHalfLength, Vector.Min(a.HalfLength, tExit));
+            tEntry = Vector.Clamp(tEntry, negatedHalfLength, a.HalfLength);
+            tExit = Vector.Clamp(tExit, negatedHalfLength, a.HalfLength);
 
             Vector3Wide.Scale(localCapsuleAxis, tEntry, out var localOffset0);
             Vector3Wide.Scale(localCapsuleAxis, tExit, out var localOffset1);
@@ -163,8 +163,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.Depth1 = a.Radius + unexpandedDepth1;
             manifold.FeatureId0 = Vector<int>.Zero;
             manifold.FeatureId1 = Vector<int>.One;
-            manifold.Contact0Exists = Vector.AndNot(Vector.GreaterThanOrEqual(manifold.Depth0, depthThreshold), inactiveLanes);
-            manifold.Contact1Exists = Vector.AndNot(Vector.BitwiseAnd(Vector.GreaterThan(tExit - tEntry, a.HalfLength * 1e-3f), Vector.GreaterThanOrEqual(manifold.Depth1, depthThreshold)), inactiveLanes);
+            manifold.Contact0Exists = Vector.AndNot(manifold.Depth0 >= depthThreshold, inactiveLanes);
+            manifold.Contact1Exists = Vector.AndNot((tExit - tEntry > a.HalfLength * 1e-3f) & (manifold.Depth1 >= depthThreshold), inactiveLanes);
 
             Matrix3x3Wide.TransformWithoutOverlap(localOffset0, hullOrientation, out manifold.OffsetA0);
             Matrix3x3Wide.TransformWithoutOverlap(localOffset1, hullOrientation, out manifold.OffsetA1);

@@ -27,7 +27,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
             Vector3Wide.Length(localOffsetA, out var centerDistance);
             Vector3Wide.Scale(localOffsetA, Vector<float>.One / centerDistance, out var initialNormal);
-            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<float>(1e-8f));
+            var useInitialFallback = centerDistance < new Vector<float>(1e-8f);
             initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.X);
             initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
             initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
@@ -41,7 +41,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 b, a, localOffsetA, bLocalOrientationA, ref hullSupportFinder, ref hullSupportFinder, initialNormal, inactiveLanes, 1e-5f * epsilonScale, depthThreshold,
                 out var depth, out var localNormal, out var closestOnB);
 
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
+            inactiveLanes = inactiveLanes | (depth < depthThreshold);
             //Not every lane will generate contacts. Rather than requiring every lane to carefully clear all contactExists states, just clear them up front.
             manifold.Contact0Exists = default;
             manifold.Contact1Exists = default;

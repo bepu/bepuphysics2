@@ -22,15 +22,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //The contact for a sphere-capsule pair is based on the closest point of the sphere center to the capsule internal line segment.
             QuaternionWide.TransformUnitXY(orientationB, out var x, out var y);
             Vector3Wide.Dot(y, offsetB, out var t);
-            t = Vector.Min(b.HalfLength, Vector.Max(-b.HalfLength, -t));
+            t = Vector.Clamp(-t, -b.HalfLength, b.HalfLength);
             Vector3Wide.Scale(y, t, out var capsuleLocalClosestPointOnLineSegment);
 
             Vector3Wide.Add(offsetB, capsuleLocalClosestPointOnLineSegment, out var sphereToInternalSegment);
             Vector3Wide.Length(sphereToInternalSegment, out var internalDistance);
             //Note that the normal points from B to A by convention. Here, the sphere is A, the capsule is B, so the normalization requires a negation.
-            var inverseDistance = new Vector<float>(-1f) / internalDistance;
+            var inverseDistance = Vector<float>.NegativeOne / internalDistance;
             Vector3Wide.Scale(sphereToInternalSegment, inverseDistance, out manifold.Normal);
-            var normalIsValid = Vector.GreaterThan(internalDistance, Vector<float>.Zero);
+            var normalIsValid = internalDistance > Vector<float>.Zero;
             //If the center of the sphere is on the internal line segment, then choose a direction on the plane defined by the capsule's up vector.
             //We computed one such candidate earlier. Note that we could usually get away with choosing a completely arbitrary direction, but 
             //going through the extra effort to compute a true local horizontal direction avoids some nasty corner case surprises if a user is trying
@@ -45,7 +45,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //For capsule-sphere, this can be computed from the normal and depth.
             var negativeOffsetFromSphere = manifold.Depth * 0.5f - a.Radius;
             Vector3Wide.Scale(manifold.Normal, negativeOffsetFromSphere, out manifold.OffsetA);
-            manifold.ContactExists = Vector.GreaterThan(manifold.Depth, -speculativeMargin);
+            manifold.ContactExists = manifold.Depth > -speculativeMargin;
         }
 
         public static void Test(ref SphereWide a, ref CapsuleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)

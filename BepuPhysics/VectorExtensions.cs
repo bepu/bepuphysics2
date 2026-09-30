@@ -10,6 +10,26 @@ namespace BepuPhysics
             {
                 return ~value;
             }
+
+            public static Vector<int> operator <(Vector<int> left, Vector<int> right)
+            {
+                return Vector.LessThan(left, right);
+            }
+
+            public static Vector<int> operator >(Vector<int> left, Vector<int> right)
+            {
+                return Vector.GreaterThan(left, right);
+            }
+
+            public static Vector<int> operator <=(Vector<int> left, Vector<int> right)
+            {
+                return Vector.LessThanOrEqual(left, right);
+            }
+
+            public static Vector<int> operator >=(Vector<int> left, Vector<int> right)
+            {
+                return Vector.GreaterThanOrEqual(left, right);
+            }
         }
         extension(Vector<float>)
         {
