@@ -116,11 +116,9 @@ namespace BepuPhysics.Collidables
             //Note that any slot that would have been coplanar with the generating face *and* behind the edge (that is, a vertex almost certainly associated with the generating face) is ignored.
             //Without this condition, it's possible for numerical cycles to occur where a face finds itself over and over again.
             var allowVertexBundles = allowVertices.As<Vector<int>>();
-            var ignoreSlot = Vector.BitwiseOr(
-                Vector.BitwiseOr(
-                    Vector.OnesComplement(allowVertexBundles[0]),
-                    Vector.BitwiseAnd(Vector.LessThanOrEqual(bestX, planeEpsilon), Vector.LessThanOrEqual(bestY, planeEpsilon))),
-                Vector.BitwiseOr(Vector.Equals(indexOffsets, edgeIndexA), Vector.Equals(indexOffsets, edgeIndexB)));
+            var ignoreSlot = ~allowVertexBundles[0] |
+                ((bestX <= planeEpsilon) & (bestY <= planeEpsilon)) |
+                (Vector.Equals(indexOffsets, edgeIndexA) | Vector.Equals(indexOffsets, edgeIndexB));
             bestX = Vector.ConditionalSelect(ignoreSlot, Vector<float>.One, bestX);
             bestY = Vector.ConditionalSelect(ignoreSlot, new Vector<float>(float.MinValue), bestY);
             var bestIndices = indexOffsets;
@@ -134,11 +132,9 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.Dot(basisY, toCandidate, out y);
 
                 var candidateIndices = indexOffsets + new Vector<int>(i << BundleIndexing.VectorShift);
-                ignoreSlot = Vector.BitwiseOr(
-                    Vector.BitwiseOr(
-                        Vector.OnesComplement(allowVertexBundles[i]),
-                        Vector.BitwiseAnd(Vector.LessThanOrEqual(x, planeEpsilon), Vector.LessThanOrEqual(y, planeEpsilon))),
-                    Vector.BitwiseOr(Vector.Equals(candidateIndices, edgeIndexA), Vector.Equals(candidateIndices, edgeIndexB)));
+                ignoreSlot = ~allowVertexBundles[i] |
+                    ((x <= planeEpsilon) & (y <= planeEpsilon)) |
+                    (Vector.Equals(candidateIndices, edgeIndexA) | Vector.Equals(candidateIndices, edgeIndexB));
                 var useCandidate = Vector.AndNot(Vector.GreaterThan(y * bestX, bestY * x), ignoreSlot);
 
                 bestY = Vector.ConditionalSelect(useCandidate, y, bestY);
@@ -193,7 +189,7 @@ namespace BepuPhysics.Collidables
             for (int i = 0; i < pointBundles.Length; ++i)
             {
                 var dot = projectedOnX[i] * projectedPlaneNormal.X + projectedOnY[i] * projectedPlaneNormal.Y;
-                var coplanar = Vector.GreaterThan(dot, negatedPlaneEpsilon);
+                var coplanar = dot > negatedPlaneEpsilon;
                 if (Vector.LessThanAny(coplanar, Vector<int>.Zero))
                 {
                     var bundleBaseIndex = i << BundleIndexing.VectorShift;
@@ -682,7 +678,7 @@ namespace BepuPhysics.Collidables
             {
                 var bundleIndices = new Vector<int>(i << BundleIndexing.VectorShift) + indexOffsetBundle;
                 Vector3Wide.DistanceSquared(pointBundles[i], centroidBundle, out var distanceSquaredCandidate);
-                mostDistantIndicesBundle = Vector.ConditionalSelect(Vector.GreaterThan(distanceSquaredCandidate, distanceSquaredBundle), bundleIndices, mostDistantIndicesBundle);
+                mostDistantIndicesBundle = Vector.ConditionalSelect(distanceSquaredCandidate > distanceSquaredBundle, bundleIndices, mostDistantIndicesBundle);
                 distanceSquaredBundle = Vector.Max(distanceSquaredBundle, distanceSquaredCandidate);
             }
             var bestDistanceSquared = distanceSquaredBundle[0];

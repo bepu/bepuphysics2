@@ -218,7 +218,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Negate(max, out min);
 
             maximumRadius = Vector.SquareRoot(HalfWidth * HalfWidth + HalfHeight * HalfHeight + HalfLength * HalfLength);
-            maximumAngularExpansion = maximumRadius - Vector.Min(HalfWidth, Vector.Min(HalfHeight, HalfLength));
+            maximumAngularExpansion = maximumRadius - Vector.Min(HalfWidth, HalfHeight, HalfLength);
         }
 
         public static int MinimumWideRayCount
@@ -244,9 +244,9 @@ namespace BepuPhysics.Collidables
             var negativeOne = -Vector<float>.One;
             var epsilon = new Vector<float>(1e-15f);
             Vector3Wide offsetToTScale;
-            offsetToTScale.X = Vector.ConditionalSelect(Vector.GreaterThan(localDirection.X, Vector<float>.Zero), negativeOne, Vector<float>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.X));
-            offsetToTScale.Y = Vector.ConditionalSelect(Vector.GreaterThan(localDirection.Y, Vector<float>.Zero), negativeOne, Vector<float>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.Y));
-            offsetToTScale.Z = Vector.ConditionalSelect(Vector.GreaterThan(localDirection.Z, Vector<float>.Zero), negativeOne, Vector<float>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.Z));
+            offsetToTScale.X = Vector.ConditionalSelect(localDirection.X > Vector<float>.Zero, negativeOne, Vector<float>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.X));
+            offsetToTScale.Y = Vector.ConditionalSelect(localDirection.Y > Vector<float>.Zero, negativeOne, Vector<float>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.Y));
+            offsetToTScale.Z = Vector.ConditionalSelect(localDirection.Z > Vector<float>.Zero, negativeOne, Vector<float>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.Z));
 
             //Compute impact times for each pair of planes in local space.
             Vector3Wide negativeT, positiveT;
@@ -265,10 +265,10 @@ namespace BepuPhysics.Collidables
             exitT.Z = Vector.Max(negativeT.Z, positiveT.Z);
             //In order for an impact to occur, the ray must enter all three slabs formed by the axis planes before exiting any of them.
             //In other words, the first exit must occur after the last entry.
-            var earliestExit = Vector.Min(Vector.Min(exitT.X, exitT.Y), exitT.Z);
-            var earliestEntry = Vector.Max(Vector.Max(entryT.X, entryT.Y), entryT.Z);
+            var earliestExit = Vector.Min(exitT.X, exitT.Y, exitT.Z);
+            var earliestEntry = Vector.Max(entryT.X, entryT.Y, entryT.Z);
             t = Vector.Max(Vector<float>.Zero, earliestEntry);
-            intersected = Vector.LessThanOrEqual(t, earliestExit);
+            intersected = t <= earliestExit;
 
             var useX = Vector.Equals(earliestEntry, entryT.X);
             var useY = Vector.AndNot(Vector.Equals(earliestEntry, entryT.Y), useX);
@@ -276,7 +276,7 @@ namespace BepuPhysics.Collidables
             normal.Y = Vector.ConditionalSelect(useX, orientation.X.Y, Vector.ConditionalSelect(useY, orientation.Y.Y, orientation.Z.Y));
             normal.Z = Vector.ConditionalSelect(useX, orientation.X.Z, Vector.ConditionalSelect(useY, orientation.Y.Z, orientation.Z.Z));
             Vector3Wide.Dot(normal, offset, out var dot);
-            var shouldNegate = Vector.LessThan(dot, Vector<float>.Zero);
+            var shouldNegate = dot < Vector<float>.Zero;
             normal.X = Vector.ConditionalSelect(shouldNegate, -normal.X, normal.X);
             normal.Y = Vector.ConditionalSelect(shouldNegate, -normal.Y, normal.Y);
             normal.Z = Vector.ConditionalSelect(shouldNegate, -normal.Z, normal.Z);
@@ -308,9 +308,9 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeLocalSupport(in BoxWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
-            support.X = Vector.ConditionalSelect(Vector.LessThan(direction.X, Vector<float>.Zero), -shape.HalfWidth, shape.HalfWidth);
-            support.Y = Vector.ConditionalSelect(Vector.LessThan(direction.Y, Vector<float>.Zero), -shape.HalfHeight, shape.HalfHeight);
-            support.Z = Vector.ConditionalSelect(Vector.LessThan(direction.Z, Vector<float>.Zero), -shape.HalfLength, shape.HalfLength);
+            support.X = Vector.ConditionalSelect(direction.X < Vector<float>.Zero, -shape.HalfWidth, shape.HalfWidth);
+            support.Y = Vector.ConditionalSelect(direction.Y < Vector<float>.Zero, -shape.HalfHeight, shape.HalfHeight);
+            support.Z = Vector.ConditionalSelect(direction.Z < Vector<float>.Zero, -shape.HalfLength, shape.HalfLength);
         }
     }
 }

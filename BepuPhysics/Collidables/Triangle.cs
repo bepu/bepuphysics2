@@ -189,13 +189,13 @@ namespace BepuPhysics.Collidables
             Vector3Wide.LengthSquared(ab, out var abLengthSquared);
             Vector3Wide.LengthSquared(ca, out var caLengthSquared);
             ComputeDegenerateTriangleEpsilon(abLengthSquared, caLengthSquared, out epsilonScale, out var epsilon);
-            nondegenerateMask = Vector.GreaterThan(triangleNormalLength, epsilon);
+            nondegenerateMask = triangleNormalLength > epsilon;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeNondegenerateTriangleMask(in Vector<float> abLengthSquared, in Vector<float> caLengthSquared, in Vector<float> triangleNormalLength, out Vector<float> epsilonScale, out Vector<int> nondegenerateMask)
         {
             ComputeDegenerateTriangleEpsilon(abLengthSquared, caLengthSquared, out epsilonScale, out var epsilon);
-            nondegenerateMask = Vector.GreaterThan(triangleNormalLength, epsilon);
+            nondegenerateMask = triangleNormalLength > epsilon;
         }
 
 
@@ -206,17 +206,17 @@ namespace BepuPhysics.Collidables
             Matrix3x3Wide.TransformWithoutOverlap(A, basis, out var worldA);
             Matrix3x3Wide.TransformWithoutOverlap(B, basis, out var worldB);
             Matrix3x3Wide.TransformWithoutOverlap(C, basis, out var worldC);
-            min.X = Vector.Min(worldA.X, Vector.Min(worldB.X, worldC.X));
-            min.Y = Vector.Min(worldA.Y, Vector.Min(worldB.Y, worldC.Y));
-            min.Z = Vector.Min(worldA.Z, Vector.Min(worldB.Z, worldC.Z));
-            max.X = Vector.Max(worldA.X, Vector.Max(worldB.X, worldC.X));
-            max.Y = Vector.Max(worldA.Y, Vector.Max(worldB.Y, worldC.Y));
-            max.Z = Vector.Max(worldA.Z, Vector.Max(worldB.Z, worldC.Z));
+            min.X = Vector.Min(worldA.X, worldB.X, worldC.X);
+            min.Y = Vector.Min(worldA.Y, worldB.Y, worldC.Y);
+            min.Z = Vector.Min(worldA.Z, worldB.Z, worldC.Z);
+            max.X = Vector.Max(worldA.X, worldB.X, worldC.X);
+            max.Y = Vector.Max(worldA.Y, worldB.Y, worldC.Y);
+            max.Z = Vector.Max(worldA.Z, worldB.Z, worldC.Z);
 
             Vector3Wide.LengthSquared(A, out var aLengthSquared);
             Vector3Wide.LengthSquared(B, out var bLengthSquared);
             Vector3Wide.LengthSquared(C, out var cLengthSquared);
-            maximumRadius = Vector.SquareRoot(Vector.Max(aLengthSquared, Vector.Max(bLengthSquared, cLengthSquared)));
+            maximumRadius = Vector.SquareRoot(Vector.Max(aLengthSquared, bLengthSquared, cLengthSquared));
             maximumAngularExpansion = maximumRadius;
         }
 
@@ -245,15 +245,11 @@ namespace BepuPhysics.Collidables
             v = -v;
             Vector3Wide.Dot(ab, aoxd, out var w);
             Vector3Wide.Normalize(normal, out normal);
-            intersected = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(
-                    Vector.GreaterThan(dn, Vector<float>.Zero),
-                    Vector.GreaterThanOrEqual(t, Vector<float>.Zero)),
-                Vector.BitwiseAnd(
-                    Vector.BitwiseAnd(
-                        Vector.GreaterThanOrEqual(v, Vector<float>.Zero),
-                        Vector.GreaterThanOrEqual(w, Vector<float>.Zero)),
-                    Vector.LessThanOrEqual(v + w, dn)));
+            intersected = (dn > Vector<float>.Zero) &
+                (t >= Vector<float>.Zero) &
+                (v >= Vector<float>.Zero) &
+                (w >= Vector<float>.Zero) &
+                (v + w <= dn);
         }
         public void RayTest(ref RigidPoseWide pose, ref RayWide ray, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
@@ -293,7 +289,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Dot(shape.A, direction, out var a);
             Vector3Wide.Dot(shape.B, direction, out var b);
             Vector3Wide.Dot(shape.C, direction, out var c);
-            var max = Vector.Max(a, Vector.Max(b, c));
+            var max = Vector.Max(a, b, c);
             Vector3Wide.ConditionalSelect(Vector.Equals(max, a), shape.A, shape.B, out support);
             Vector3Wide.ConditionalSelect(Vector.Equals(max, c), shape.C, support, out support);
         }

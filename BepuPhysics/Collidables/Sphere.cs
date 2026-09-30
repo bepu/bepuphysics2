@@ -149,8 +149,8 @@ namespace BepuPhysics.Collidables
         public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
             //Spheres have perfect symmetry, so there is no need for angular expansion.
-            maximumRadius = new Vector<float>();
-            maximumAngularExpansion = new Vector<float>();
+            maximumRadius = Vector<float>.Zero;
+            maximumAngularExpansion = Vector<float>.Zero;
 
             //It's technically true that spheres (and only spheres) do not require orientation to be loaded and could be special cased to reduce memory traffic, but just heck no.
             //It's very likely that the orientation loaded for the sphere was already in L1 anyway due to the online batching performed during the pose integrator.
@@ -189,11 +189,7 @@ namespace BepuPhysics.Collidables
             //If b > 0 && c > 0, ray is outside and pointing away, no hit.
             //If discriminant < 0, the ray misses.
             var discriminant = b * b - c;
-            intersected = Vector.BitwiseAnd(
-                Vector.BitwiseOr(
-                    Vector.LessThanOrEqual(b, Vector<float>.Zero),
-                    Vector.LessThanOrEqual(c, Vector<float>.Zero)),
-                Vector.GreaterThanOrEqual(discriminant, Vector<float>.Zero));
+            intersected = ((b <= Vector<float>.Zero) | (c <= Vector<float>.Zero)) & (discriminant >= Vector<float>.Zero);
 
 
             t = Vector.Max(-tOffset, -b - Vector.SquareRoot(discriminant));

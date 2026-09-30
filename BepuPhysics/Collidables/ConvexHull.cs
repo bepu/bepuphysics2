@@ -235,12 +235,12 @@ namespace BepuPhysics.Collidables
                 //If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
                 //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result
                 //because a parallel ray will never actually intersect the surface. The resulting intervals are practical approximations of the 'true' infinite intervals.
-                denominator = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(denominator), epsilon), Vector.ConditionalSelect(Vector.LessThan(denominator, Vector<float>.Zero), -epsilon, epsilon), denominator);
+                denominator = Vector.ConditionalSelect(Vector.Abs(denominator) < epsilon, Vector.ConditionalSelect(denominator < Vector<float>.Zero, -epsilon, epsilon), denominator);
                 var planeT = numerator / denominator;
-                var exitCandidate = Vector.GreaterThan(denominator, Vector<float>.Zero);
-                var laneExists = Vector.GreaterThan(boundingPlane.Offset, minValue);
-                earliestExitWide = Vector.ConditionalSelect(Vector.BitwiseAnd(laneExists, exitCandidate), Vector.Min(planeT, earliestExitWide), earliestExitWide);
-                var entryCandidate = Vector.BitwiseAnd(Vector.GreaterThan(planeT, latestEntryWide), Vector.AndNot(laneExists, exitCandidate));
+                var exitCandidate = denominator > Vector<float>.Zero;
+                var laneExists = boundingPlane.Offset > minValue;
+                earliestExitWide = Vector.ConditionalSelect(laneExists & exitCandidate, Vector.Min(planeT, earliestExitWide), earliestExitWide);
+                var entryCandidate = (planeT > latestEntryWide) & Vector.AndNot(laneExists, exitCandidate);
                 latestEntryWide = Vector.ConditionalSelect(entryCandidate, planeT, latestEntryWide);
                 latestEntryIndexBundle = Vector.ConditionalSelect(entryCandidate, candidateIndices, latestEntryIndexBundle);
             }
@@ -444,7 +444,7 @@ namespace BepuPhysics.Collidables
                 {
                     ref var candidate = ref hull.Points[j];
                     Vector3Wide.Dot(slotDirection, candidate, out var dotCandidate);
-                    var useCandidate = Vector.GreaterThan(dotCandidate, dot);
+                    var useCandidate = dotCandidate > dot;
                     bestIndices = Vector.ConditionalSelect(useCandidate, indexOffsets + new Vector<int>(j << BundleIndexing.VectorShift), bestIndices);
                     dot = Vector.ConditionalSelect(useCandidate, dotCandidate, dot);
                 }

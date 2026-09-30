@@ -200,7 +200,7 @@ namespace BepuPhysics.Collidables
             var baseHeight = Height * new Vector<float>(0.25f);
             var widthSideDistance = apexHeight * HalfWidth / Vector.SquareRoot(HalfWidth * HalfWidth + Height * Height);
             var lengthSideDistance = apexHeight * HalfLength / Vector.SquareRoot(HalfLength * HalfLength + Height * Height);
-            var minimumRadius = Vector.Min(baseHeight, Vector.Min(widthSideDistance, lengthSideDistance));
+            var minimumRadius = Vector.Min(baseHeight, widthSideDistance, lengthSideDistance);
             maximumAngularExpansion = maximumRadius - minimumRadius;
         }
 

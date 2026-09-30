@@ -270,29 +270,23 @@ namespace BepuPhysics.Collidables
             var radiusSquared = Radius * Radius;
             var c = (o.X * o.X + o.Z * o.Z) - radiusSquared;
 
-            var rayIsntParallel = Vector.GreaterThan(a, new Vector<float>(1e-8f));
+            var rayIsntParallel = a > new Vector<float>(1e-8f);
             var discriminant = b * b - a * c;
-            var cylinderIntersected = Vector.BitwiseAnd(
-                Vector.BitwiseOr(
-                    Vector.LessThanOrEqual(b, Vector<float>.Zero),
-                    Vector.LessThanOrEqual(c, Vector<float>.Zero)),
-                Vector.GreaterThanOrEqual(discriminant, Vector<float>.Zero));
+            var cylinderIntersected = ((b <= Vector<float>.Zero) | (c <= Vector<float>.Zero)) & (discriminant >= Vector<float>.Zero);
             var cylinderT = Vector.Max(-tOffset, (-b - Vector.SquareRoot(discriminant)) / a);
             Vector3Wide.Scale(d, cylinderT, out oOffset);
             Vector3Wide.Add(o, oOffset, out var cylinderHitLocation);
             var inverseRadius = Vector<float>.One / Radius;
             var cylinderNormalX = cylinderHitLocation.X * inverseRadius;
             var cylinderNormalZ = cylinderHitLocation.Z * inverseRadius;
-            var useCylinder = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(cylinderHitLocation.Y, -HalfLength), Vector.LessThanOrEqual(cylinderHitLocation.Y, HalfLength));
+            var useCylinder = (cylinderHitLocation.Y >= -HalfLength) & (cylinderHitLocation.Y <= HalfLength);
 
             //Intersect the spherical cap for any lane which ended up not using the cylinder.
             //Note that the sphere cap is nudged forward in the parallel case to match the origin of the ray.
             //This is just a simple way to capture the case where the ray starts inside the capsule, but too far to up/down to hit the cap chosen by d.Y.
             var negatedHalfLength = -HalfLength;
-            var parallelSphereY = Vector.ConditionalSelect(Vector.LessThan(d.Y, Vector<float>.Zero), 
-                Vector.Max(negatedHalfLength, Vector.Min(o.Y, HalfLength)), 
-                Vector.Min(HalfLength, Vector.Max(o.Y, negatedHalfLength)));
-            var nonParallelSphereY = Vector.ConditionalSelect(Vector.GreaterThan(cylinderHitLocation.Y, HalfLength), HalfLength, negatedHalfLength);
+            var parallelSphereY = Vector.Clamp(o.Y, negatedHalfLength, HalfLength);
+            var nonParallelSphereY = Vector.ConditionalSelect(cylinderHitLocation.Y > HalfLength, HalfLength, negatedHalfLength);
             Vector<float> sphereY = Vector.ConditionalSelect(rayIsntParallel, nonParallelSphereY, parallelSphereY);
 
             o.Y -= sphereY;
@@ -301,11 +295,7 @@ namespace BepuPhysics.Collidables
             capC -= radiusSquared;
 
             var capDiscriminant = capB * capB - capC;
-            var capIntersected = Vector.BitwiseAnd(
-                Vector.BitwiseOr(
-                    Vector.LessThanOrEqual(capB, Vector<float>.Zero),
-                    Vector.LessThanOrEqual(capC, Vector<float>.Zero)),
-                Vector.GreaterThanOrEqual(capDiscriminant, Vector<float>.Zero));
+            var capIntersected = ((capB <= Vector<float>.Zero) | (capC <= Vector<float>.Zero)) & (capDiscriminant >= Vector<float>.Zero);
 
             var capT = Vector.Max(-tOffset, -capB - Vector.SquareRoot(capDiscriminant));
             Vector3Wide.Scale(d, capT, out oOffset);
@@ -339,14 +329,14 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Scale(orientation.Y, shape.HalfLength, out support);
             Vector3Wide.Negate(support, out var negated);
             Vector3Wide.Dot(orientation.Y, direction, out var dot);
-            var shouldNegate = Vector.LessThan(dot, Vector<float>.Zero);
+            var shouldNegate = dot < Vector<float>.Zero;
             Vector3Wide.ConditionalSelect(shouldNegate, negated, support, out support);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeLocalSupport(in CapsuleWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             support.X = Vector<float>.Zero;
-            support.Y = Vector.ConditionalSelect(Vector.LessThan(direction.Y, Vector<float>.Zero), -shape.HalfLength, shape.HalfLength);
+            support.Y = Vector.ConditionalSelect(direction.Y < Vector<float>.Zero, -shape.HalfLength, shape.HalfLength);
             support.Z = Vector<float>.Zero;
         }
     }

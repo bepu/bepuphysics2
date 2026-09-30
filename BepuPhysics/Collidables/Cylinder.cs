@@ -266,44 +266,39 @@ namespace BepuPhysics.Collidables
             var radiusSquared = Radius * Radius;
             var c = (o.X * o.X + o.Z * o.Z) - radiusSquared;
 
-            var rayIsntParallel = Vector.GreaterThan(a, new Vector<float>(1e-8f));
+            var rayIsntParallel = a > new Vector<float>(1e-8f);
             var discriminant = b * b - a * c;
-            var cylinderIntersected = Vector.BitwiseAnd(
-                Vector.BitwiseOr(
-                    Vector.LessThanOrEqual(b, Vector<float>.Zero),
-                    Vector.LessThanOrEqual(c, Vector<float>.Zero)),
-                Vector.GreaterThanOrEqual(discriminant, Vector<float>.Zero));
+            var cylinderIntersected = ((b <= Vector<float>.Zero) | (c <= Vector<float>.Zero)) & (discriminant >= Vector<float>.Zero);
             var cylinderT = Vector.Max(-tOffset, (-b - Vector.SquareRoot(discriminant)) / a);
             Vector3Wide.Scale(d, cylinderT, out oOffset);
             Vector3Wide.Add(o, oOffset, out var cylinderHitLocation);
             var inverseRadius = Vector<float>.One / Radius;
             var cylinderNormalX = cylinderHitLocation.X * inverseRadius;
             var cylinderNormalZ = cylinderHitLocation.Z * inverseRadius;
-            var useCylinder = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(cylinderHitLocation.Y, -HalfLength), Vector.LessThanOrEqual(cylinderHitLocation.Y, HalfLength));
+            var useCylinder = (cylinderHitLocation.Y >= -HalfLength) & (cylinderHitLocation.Y <= HalfLength);
 
             //Intersect the disc cap for any lane which ended up not using the cylinder.
             Vector<float> discY = Vector.ConditionalSelect(
-                Vector.BitwiseOr(
-                    Vector.BitwiseAnd(Vector.GreaterThan(cylinderHitLocation.Y, HalfLength), rayIsntParallel),
-                    Vector.AndNot(Vector.LessThanOrEqual(d.Y, Vector<float>.Zero), rayIsntParallel)), HalfLength, -HalfLength);
+                ((cylinderHitLocation.Y > HalfLength) & rayIsntParallel) |
+                Vector.AndNot(d.Y <= Vector<float>.Zero, rayIsntParallel), HalfLength, -HalfLength);
 
             //Intersect the ray with the plane anchored at discY with normal equal to (0,1,0).
             //t = dot(rayOrigin - (0,discY,0), (0,1,0)) / dot(rayDirection, (0,1,0)
             //The ray can only hit the disc if the ray is inside the cylinder or the direction points toward the cylinder.
-            var withinDiscsOrRayPointsTowardDisc = Vector.BitwiseOr(Vector.LessThanOrEqual(Vector.Abs(o.Y), HalfLength), Vector.LessThan(o.Y * d.Y, Vector<float>.Zero));
+            var withinDiscsOrRayPointsTowardDisc = (Vector.Abs(o.Y) <= HalfLength) | (o.Y * d.Y < Vector<float>.Zero);
 
             var capT = (discY - o.Y) / d.Y;
 
             var hitLocationX = o.X + d.X * capT;
             var hitLocationZ = o.Z + d.Z * capT;
-            var capHitWithinRadius = Vector.LessThanOrEqual(hitLocationX * hitLocationX + hitLocationZ * hitLocationZ, radiusSquared);
-            var hitCap = Vector.BitwiseAnd(withinDiscsOrRayPointsTowardDisc, capHitWithinRadius);
+            var capHitWithinRadius = hitLocationX * hitLocationX + hitLocationZ * hitLocationZ <= radiusSquared;
+            var hitCap = withinDiscsOrRayPointsTowardDisc & capHitWithinRadius;
 
             t = (tOffset + Vector.ConditionalSelect(useCylinder, cylinderT, Vector.ConditionalSelect(hitCap, capT, Vector<float>.Zero))) * inverseDLength;
-            var capUsesUpwardFacingNormal = Vector.LessThan(d.Y, Vector<float>.Zero);
+            var capUsesUpwardFacingNormal = d.Y < Vector<float>.Zero;
             Vector3Wide localNormal;
             localNormal.X = Vector.ConditionalSelect(useCylinder, cylinderNormalX, Vector<float>.Zero);
-            localNormal.Y = Vector.ConditionalSelect(useCylinder, Vector<float>.Zero, Vector.ConditionalSelect(capUsesUpwardFacingNormal, Vector<float>.One, new Vector<float>(-1)));
+            localNormal.Y = Vector.ConditionalSelect(useCylinder, Vector<float>.Zero, Vector.ConditionalSelect(capUsesUpwardFacingNormal, Vector<float>.One, Vector<float>.NegativeOne));
             localNormal.Z = Vector.ConditionalSelect(useCylinder, cylinderNormalZ, Vector<float>.Zero);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, orientation, out normal);
             intersected = Vector.ConditionalSelect(useCylinder, cylinderIntersected, hitCap);
@@ -335,12 +330,12 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeLocalSupport(in CylinderWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
-            support.Y = Vector.ConditionalSelect(Vector.GreaterThan(direction.Y, Vector<float>.Zero), shape.HalfLength, -shape.HalfLength);
+            support.Y = Vector.ConditionalSelect(direction.Y > Vector<float>.Zero, shape.HalfLength, -shape.HalfLength);
             //TODO: Using a hardware accelerated reciprocal sqrt approximation would be hugely beneficial here.
             //It would actually be meaningful to full frame time in simulations that rely on cylinders.
             var horizontalLength = Vector.SquareRoot(direction.X * direction.X + direction.Z * direction.Z);
             var normalizeScale = shape.Radius / horizontalLength;
-            var useHorizontal = Vector.GreaterThan(horizontalLength, new Vector<float>(1e-8f));
+            var useHorizontal = horizontalLength > new Vector<float>(1e-8f);
             support.X = Vector.ConditionalSelect(useHorizontal, direction.X * normalizeScale, Vector<float>.Zero);
             support.Z = Vector.ConditionalSelect(useHorizontal, direction.Z * normalizeScale, Vector<float>.Zero);
         }

@@ -189,31 +189,30 @@ namespace BepuPhysics.Collidables
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(rayWide.Direction, orientation, out var localDirection);
 
             //The rectangle lies in the local XZ plane and is one sided, with its normal pointing along +Y.
-            var zero = Vector<float>.Zero;
-            var approaching = Vector.LessThan(localDirection.Y, zero);
-            var inFront = Vector.GreaterThanOrEqual(localOffset.Y, zero);
+            var approaching = localDirection.Y < Vector<float>.Zero;
+            var inFront = localOffset.Y >= Vector<float>.Zero;
 
             //Avoid division by zero in lanes which cannot intersect. The value used in those lanes is discarded below.
             var distanceAlongNormal = Vector.Max(new Vector<float>(Epsilon), -localDirection.Y);
-            var candidateT = Vector.Max(zero, localOffset.Y / distanceAlongNormal);
+            var candidateT = Vector.Max(Vector<float>.Zero, localOffset.Y / distanceAlongNormal);
 
             var hitX = localOffset.X + localDirection.X * candidateT;
             var hitZ = localOffset.Z + localDirection.Z * candidateT;
             var withinBounds = (Vector.Abs(hitX) <= HalfWidth) & (Vector.Abs(hitZ) <= HalfLength);
             intersected = approaching & inFront & withinBounds;
-            t = Vector.ConditionalSelect(intersected, candidateT, zero);
+            t = Vector.ConditionalSelect(intersected, candidateT, Vector<float>.Zero);
 
             normal.X = orientation.Y.X;
             normal.Y = orientation.Y.Y;
             normal.Z = orientation.Y.Z;
             Vector3Wide.Dot(normal, offset, out var dot);
-            var shouldNegate = dot < zero;
+            var shouldNegate = dot < Vector<float>.Zero;
             normal.X = Vector.ConditionalSelect(shouldNegate, -normal.X, normal.X);
             normal.Y = Vector.ConditionalSelect(shouldNegate, -normal.Y, normal.Y);
             normal.Z = Vector.ConditionalSelect(shouldNegate, -normal.Z, normal.Z);
-            normal.X = Vector.ConditionalSelect(intersected, normal.X, zero);
-            normal.Y = Vector.ConditionalSelect(intersected, normal.Y, zero);
-            normal.Z = Vector.ConditionalSelect(intersected, normal.Z, zero);
+            normal.X = Vector.ConditionalSelect(intersected, normal.X, Vector<float>.Zero);
+            normal.Y = Vector.ConditionalSelect(intersected, normal.Y, Vector<float>.Zero);
+            normal.Z = Vector.ConditionalSelect(intersected, normal.Z, Vector<float>.Zero);
         }
     }
 

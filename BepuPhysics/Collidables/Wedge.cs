@@ -225,12 +225,12 @@ namespace BepuPhysics.Collidables
             var extrusionX = Vector.Abs(HalfLength * basis.Z.X);
             var extrusionY = Vector.Abs(HalfLength * basis.Z.Y);
             var extrusionZ = Vector.Abs(HalfLength * basis.Z.Z);
-            min.X = Vector.Min(worldA.X, Vector.Min(worldB.X, worldC.X)) - extrusionX;
-            min.Y = Vector.Min(worldA.Y, Vector.Min(worldB.Y, worldC.Y)) - extrusionY;
-            min.Z = Vector.Min(worldA.Z, Vector.Min(worldB.Z, worldC.Z)) - extrusionZ;
-            max.X = Vector.Max(worldA.X, Vector.Max(worldB.X, worldC.X)) + extrusionX;
-            max.Y = Vector.Max(worldA.Y, Vector.Max(worldB.Y, worldC.Y)) + extrusionY;
-            max.Z = Vector.Max(worldA.Z, Vector.Max(worldB.Z, worldC.Z)) + extrusionZ;
+            min.X = Vector.Min(worldA.X, worldB.X, worldC.X) - extrusionX;
+            min.Y = Vector.Min(worldA.Y, worldB.Y, worldC.Y) - extrusionY;
+            min.Z = Vector.Min(worldA.Z, worldB.Z, worldC.Z) - extrusionZ;
+            max.X = Vector.Max(worldA.X, worldB.X, worldC.X) + extrusionX;
+            max.Y = Vector.Max(worldA.Y, worldB.Y, worldC.Y) + extrusionY;
+            max.Z = Vector.Max(worldA.Z, worldB.Z, worldC.Z) + extrusionZ;
 
             var widthSquared = Width * Width;
             var heightSquared = Height * Height;
