@@ -13,7 +13,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public static void Test(ref SphereWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
-            throw new NotImplementedException();
+            Test(ref a, ref b, ref speculativeMargin, ref offsetB, ref orientationB, pairCount, out manifold);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -66,7 +66,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public static void Test(ref SphereWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
     }
 }

@@ -382,12 +382,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public static void Test(ref CapsuleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public static void Test(ref CapsuleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex2ContactManifoldWide manifold)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
     }
 }
