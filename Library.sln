@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BepuPhysics", "BepuPhysics\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BepuUtilities", "BepuUtilities\BepuUtilities.csproj", "{73294547-FA97-4A63-919C-E7969294D655}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BepuPhysicsTests", "BepuPhysicsTests\BepuPhysicsTests.csproj", "{F8ECB5AF-8FC9-41F9-9239-B6E515EDABF0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,6 +33,14 @@ Global
 		{73294547-FA97-4A63-919C-E7969294D655}.ReleaseStrip|Any CPU.Build.0 = ReleaseStrip|Any CPU
 		{73294547-FA97-4A63-919C-E7969294D655}.ReleaseStripNoProfiling|Any CPU.ActiveCfg = ReleaseStrip|Any CPU
 		{73294547-FA97-4A63-919C-E7969294D655}.ReleaseStripNoProfiling|Any CPU.Build.0 = ReleaseStrip|Any CPU
+		{F8ECB5AF-8FC9-41F9-9239-B6E515EDABF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8ECB5AF-8FC9-41F9-9239-B6E515EDABF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8ECB5AF-8FC9-41F9-9239-B6E515EDABF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8ECB5AF-8FC9-41F9-9239-B6E515EDABF0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8ECB5AF-8FC9-41F9-9239-B6E515EDABF0}.ReleaseStrip|Any CPU.ActiveCfg = Release|Any CPU
+		{F8ECB5AF-8FC9-41F9-9239-B6E515EDABF0}.ReleaseStrip|Any CPU.Build.0 = Release|Any CPU
+		{F8ECB5AF-8FC9-41F9-9239-B6E515EDABF0}.ReleaseStripNoProfiling|Any CPU.ActiveCfg = Release|Any CPU
+		{F8ECB5AF-8FC9-41F9-9239-B6E515EDABF0}.ReleaseStripNoProfiling|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
