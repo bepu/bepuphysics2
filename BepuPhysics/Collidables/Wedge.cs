@@ -36,6 +36,13 @@ namespace BepuPhysics.Collidables
         private const float OneThird = 1f / 3f;
         private const float TwoThirds = 2f / 3f;
 
+        private readonly Vector3 VertexAFront => new Vector3(-OneThird * Width, -OneThird * Height, -HalfLength);
+        private readonly Vector3 VertexBFront => new Vector3(TwoThirds * Width, -OneThird * Height, -HalfLength);
+        private readonly Vector3 VertexCFront => new Vector3(-OneThird * Width, TwoThirds * Height, -HalfLength);
+        private readonly Vector3 VertexABack => new Vector3(-OneThird * Width, -OneThird * Height, HalfLength);
+        private readonly Vector3 VertexBBack => new Vector3(TwoThirds * Width, -OneThird * Height, HalfLength);
+        private readonly Vector3 VertexCBack => new Vector3(-OneThird * Width, TwoThirds * Height, HalfLength);
+
         public readonly void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var basis);
@@ -159,6 +166,11 @@ namespace BepuPhysics.Collidables
             return new ConvexShapeBatch<Wedge, WedgeWide>(pool, initialCapacity);
         }
 
+        internal readonly ConvexHull ToConvexHull(BufferPool pool)
+        {
+            return new ConvexHull([VertexAFront, VertexBFront, VertexCFront, VertexABack, VertexBBack, VertexCBack], pool, out _);
+        }
+
         public const int Id = 11;
         public static int TypeId => Id;
     }
@@ -181,11 +193,23 @@ namespace BepuPhysics.Collidables
             HalfLength = new Vector<float>(shape.HalfLength);
         }
 
+        public void ReadFirst(out Wedge target)
+        {
+            target.Width = Unsafe.As<Vector<float>, float>(ref Width);
+            target.Height = Unsafe.As<Vector<float>, float>(ref Height);
+            target.HalfLength = Unsafe.As<Vector<float>, float>(ref HalfLength);
+        }
+
         public void WriteFirst(in Wedge source)
         {
             Unsafe.As<Vector<float>, float>(ref Width) = source.Width;
             Unsafe.As<Vector<float>, float>(ref Height) = source.Height;
             Unsafe.As<Vector<float>, float>(ref HalfLength) = source.HalfLength;
+        }
+
+        public void ReadSlot(int index, out Wedge target)
+        {
+            GatherScatter.GetOffsetInstance(ref this, index).ReadFirst(out target);
         }
 
         public void WriteSlot(int index, in Wedge source)

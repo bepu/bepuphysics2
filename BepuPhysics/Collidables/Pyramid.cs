@@ -27,6 +27,12 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public float Height;
 
+        private readonly Vector3 ApexPoint => new Vector3(0, Height * 0.75f, 0);
+        private readonly Vector3 BasePointQuadrant1 => new Vector3(HalfWidth, Height * -0.25f, HalfLength);
+        private readonly Vector3 BasePointQuadrant2 => new Vector3(-HalfWidth, Height * -0.25f, HalfLength);
+        private readonly Vector3 BasePointQuadrant3 => new Vector3(-HalfWidth, Height * -0.25f, -HalfLength);
+        private readonly Vector3 BasePointQuadrant4 => new Vector3(HalfWidth, Height * -0.25f, -HalfLength);
+
         public readonly void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var basis);
@@ -140,6 +146,11 @@ namespace BepuPhysics.Collidables
             return new ConvexShapeBatch<Pyramid, PyramidWide>(pool, initialCapacity);
         }
 
+        internal readonly ConvexHull ToConvexHull(BufferPool pool)
+        {
+            return new ConvexHull([ApexPoint, BasePointQuadrant1, BasePointQuadrant2, BasePointQuadrant3, BasePointQuadrant4], pool, out _);
+        }
+
         public const int Id = 10;
         public static int TypeId => Id;
     }
@@ -162,12 +173,21 @@ namespace BepuPhysics.Collidables
             HalfLength = new Vector<float>(shape.HalfLength);
             Height = new Vector<float>(shape.Height);
         }
+
+        public void ReadFirst(out Pyramid target)
+        {
+            target.HalfWidth = Unsafe.As<Vector<float>, float>(ref HalfWidth);
+            target.HalfLength = Unsafe.As<Vector<float>, float>(ref HalfLength);
+            target.Height = Unsafe.As<Vector<float>, float>(ref Height);
+        }
+
         public void WriteFirst(in Pyramid source)
         {
             Unsafe.As<Vector<float>, float>(ref HalfWidth) = source.HalfWidth;
             Unsafe.As<Vector<float>, float>(ref HalfLength) = source.HalfLength;
             Unsafe.As<Vector<float>, float>(ref Height) = source.Height;
         }
+
         public readonly void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientations, out var basis);
@@ -206,6 +226,11 @@ namespace BepuPhysics.Collidables
 
         public readonly void Initialize(in Buffer<byte> memory)
         {
+        }
+
+        public void ReadSlot(int index, out Pyramid target)
+        {
+            GatherScatter.GetOffsetInstance(ref this, index).ReadFirst(out target);
         }
 
         public void WriteSlot(int index, in Pyramid source)
