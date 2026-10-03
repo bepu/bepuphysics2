@@ -1,4 +1,6 @@
 ﻿using BepuPhysics.CollisionDetection;
+using BepuPhysics.CollisionDetection.CollisionTasks;
+using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Memory;
 using System;
@@ -10,7 +12,7 @@ namespace BepuPhysics.Collidables
     /// <summary>
     /// Collision shape representing an individual rectangle. Rectangle collisions and ray tests are one-sided; only tests which see the rectangle from the side of its normal will report hits.
     /// </summary>
-    public struct Rectangle : IConvexShape
+    public struct Rectangle : IConvexShape, IHomogeneousCompoundShape<Triangle, TriangleWide>
     {
         /// <summary>
         /// Half of the rectangle's width along its local X axis.
@@ -29,6 +31,25 @@ namespace BepuPhysics.Collidables
         /// Gets or sets the length of the rectangle along its local Z axis.
         /// </summary>
         public float Length { readonly get { return HalfLength * 2; } set { HalfLength = value * 0.5f; } }
+
+        /// <summary>
+        /// Gets the local space position of the rectangle's corner in the first quadrant (positive X, positive Z).
+        /// </summary>
+        public readonly Vector3 Quadrant1 => new(HalfWidth, 0, HalfLength);
+        /// <summary>
+        /// Gets the local space position of the rectangle's corner in the second quadrant (negative X, positive Z).
+        /// </summary>
+        public readonly Vector3 Quadrant2 => new(-HalfWidth, 0, HalfLength);
+        /// <summary>
+        /// Gets the local space position of the rectangle's corner in the third quadrant (negative X, negative Z).
+        /// </summary>
+        public readonly Vector3 Quadrant3 => new(-HalfWidth, 0, -HalfLength);
+        /// <summary>
+        /// Gets the local space position of the rectangle's corner in the fourth quadrant (positive X, negative Z).
+        /// </summary>
+        public readonly Vector3 Quadrant4 => new(HalfWidth, 0, -HalfLength);
+
+        readonly int IHomogeneousCompoundShape<Triangle, TriangleWide>.ChildCount => 2;
 
         /// <inheritdoc/>
         public readonly void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max)
@@ -122,7 +143,117 @@ namespace BepuPhysics.Collidables
             return new ConvexShapeBatch<Rectangle, RectangleWide>(pool, initialCapacity);
         }
 
+        /// <inheritdoc/>
+        public readonly void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, BufferPool pool, ref TRayHitHandler hitHandler)
+            where TRayHitHandler : struct, IShapeRayHitHandler
+        {
+            for (int i = 0; i < 2; ++i)
+            {
+                GetPosedLocalChild(i, out var triangle, out var childPose);
+                RigidPose.MultiplyWithoutOverlap(pose, childPose, out var finalPose);
+                if (triangle.RayTest(finalPose, ray.Origin, ray.Direction, out var t, out var normal) && t < maximumT)
+                {
+                    maximumT = t;
+                    hitHandler.OnRayHit(in ray, ref maximumT, t, normal, i);
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public readonly void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, BufferPool pool, ref TRayHitHandler hitHandler)
+            where TRayHitHandler : struct, IShapeRayHitHandler
+        {
+            for (int i = 0; i < 2; ++i)
+            {
+                GetPosedLocalChild(i, out var triangle, out var childPose);
+                RigidPose.MultiplyWithoutOverlap(pose, childPose, out var finalPose);
+                WideRayTester.Test<RaySource, Triangle, TriangleWide, TRayHitHandler>(ref triangle, finalPose, ref rays, ref hitHandler);
+            }
+        }
+
+        /// <inheritdoc/>
+        public readonly void GetLocalChild(int triangleIndex, out Triangle triangleData)
+        {
+            triangleData = triangleIndex == 0 ? new Triangle
+            {
+                A = Quadrant3,
+                B = Quadrant4,
+                C = Quadrant1
+            } : new Triangle
+            {
+                A = Quadrant3,
+                B = Quadrant1,
+                C = Quadrant2
+            };
+        }
+
+        /// <inheritdoc/>
+        public readonly void GetPosedLocalChild(int triangleIndex, out Triangle triangleData, out RigidPose childPose)
+        {
+            GetLocalChild(triangleIndex, out triangleData);
+            childPose = (triangleData.A + triangleData.B + triangleData.C) * (1f / 3f);
+            triangleData.A -= childPose.Position;
+            triangleData.B -= childPose.Position;
+            triangleData.C -= childPose.Position;
+        }
+
+        /// <inheritdoc/>
+        public readonly void GetLocalChild(int triangleIndex, ref TriangleWide triangleData)
+        {
+            GetLocalChild(triangleIndex, out var triangle);
+            triangleData.WriteFirst(triangle);
+        }
+
+        readonly void IDisposableShape.Dispose(BufferPool pool)
+        {
+        }
+
+        readonly unsafe void IBoundsQueryableCompound.FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
+        {
+            for (int pairIndex = 0; pairIndex < pairs.Length; ++pairIndex)
+            {
+                ref var pair = ref pairs[pairIndex];
+                ref var rectangle = ref Unsafe.AsRef<Rectangle>(pair.Container);
+                if (BoundingBox.Intersects(rectangle.Quadrant3, rectangle.Quadrant1, pair.Min, pair.Max))
+                {
+                    ref var overlapsForPair = ref overlaps.GetOverlapsForPair(pairIndex);
+                    overlapsForPair.Allocate(pool) = 0;
+                    overlapsForPair.Allocate(pool) = 1;
+                }
+            }
+        }
+
+        readonly unsafe void IBoundsQueryableCompound.FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
+        {
+            Tree.ConvertBoxToCentroidWithExtent(min, max, out var sweepOrigin, out var expansion);
+            TreeRay.CreateFrom(sweepOrigin, sweep, maximumT, out var ray);
+            ref var overlapsCollection = ref Unsafe.AsRef<TOverlaps>(overlaps);
+            var childMin = Quadrant3 - expansion;
+            var childMax = Quadrant1 + expansion;
+            if (Tree.Intersects(childMin, childMax, &ray, out _))
+            {
+                //Both triangles are guaranteed to overlap because they have the same bounds as the rectangle itself.
+                overlapsCollection.Allocate(pool) = 0;
+                overlapsCollection.Allocate(pool) = 1;
+            }
+        }
+
+        readonly void IBoundsQueryableCompound.FindLocalOverlaps<TEnumerator>(Vector3 min, Vector3 max, BufferPool pool, Shapes shapes, ref TEnumerator enumerator)
+        {
+            // The rectangle is a homogeneous compound with two triangles.
+            // Both triangles are guaranteed to have the same bounds as the rectangle itself, so we can just check the rectangle's bounds against the query.
+
+            if (BoundingBox.Intersects(Quadrant3, Quadrant1, min, max))
+            {
+                //Both triangles are guaranteed to overlap.
+                if (!enumerator.LoopBody(0))
+                    return;
+                enumerator.LoopBody(1);
+            }
+        }
+
         public const int Id = 12;
+
         /// <inheritdoc/>
         public static int TypeId => Id;
     }

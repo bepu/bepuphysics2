@@ -97,10 +97,10 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new ConvexCollisionTask<Sphere, SphereWide, Cone, ConeWide, SphereIncludingPair, SphereIncludingPairWide<Cone, ConeWide>, Convex1ContactManifoldWide, SphereConeTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Sphere, SphereWide, Pyramid, PyramidWide, SphereIncludingPair, SphereIncludingPairWide<Pyramid, PyramidWide>, Convex1ContactManifoldWide, SpherePyramidTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Sphere, SphereWide, Wedge, WedgeWide, SphereIncludingPair, SphereIncludingPairWide<Wedge, WedgeWide>, Convex1ContactManifoldWide, SphereWedgeTester>());
-            defaultTaskRegistry.Register(new ConvexCollisionTask<Sphere, SphereWide, Rectangle, RectangleWide, SphereIncludingPair, SphereIncludingPairWide<Rectangle, RectangleWide>, Convex1ContactManifoldWide, SphereRectangleTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Sphere, SphereWide, ConvexHull, ConvexHullWide, SphereIncludingPair, SphereIncludingPairWide<ConvexHull, ConvexHullWide>, Convex1ContactManifoldWide, SphereConvexHullTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Sphere, Compound, ConvexCompoundOverlapFinder<Sphere, SphereWide, Compound>, ConvexCompoundContinuations<Compound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Sphere, BigCompound, ConvexCompoundOverlapFinder<Sphere, SphereWide, BigCompound>, ConvexCompoundContinuations<BigCompound>, NonconvexReduction>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Sphere, Rectangle, ConvexCompoundOverlapFinder<Sphere, SphereWide, Rectangle>, ConvexMeshContinuations<Rectangle>, MeshReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Sphere, Mesh, ConvexCompoundOverlapFinder<Sphere, SphereWide, Mesh>, ConvexMeshContinuations<Mesh>, MeshReduction>());
 
             defaultTaskRegistry.Register(new ConvexCollisionTask<Capsule, CapsuleWide, Capsule, CapsuleWide, FliplessPair, FliplessPairWide<Capsule, CapsuleWide>, Convex2ContactManifoldWide, CapsulePairTester>());
@@ -110,10 +110,10 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new ConvexCollisionTask<Capsule, CapsuleWide, Cone, ConeWide, CollisionPair, ConvexPairWide<Capsule, CapsuleWide, Cone, ConeWide>, Convex2ContactManifoldWide, CapsuleConeTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Capsule, CapsuleWide, Pyramid, PyramidWide, CollisionPair, ConvexPairWide<Capsule, CapsuleWide, Pyramid, PyramidWide>, Convex2ContactManifoldWide, CapsulePyramidTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Capsule, CapsuleWide, Wedge, WedgeWide, CollisionPair, ConvexPairWide<Capsule, CapsuleWide, Wedge, WedgeWide>, Convex2ContactManifoldWide, CapsuleWedgeTester>());
-            defaultTaskRegistry.Register(new ConvexCollisionTask<Capsule, CapsuleWide, Rectangle, RectangleWide, CollisionPair, ConvexPairWide<Capsule, CapsuleWide, Rectangle, RectangleWide>, Convex2ContactManifoldWide, CapsuleRectangleTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Capsule, CapsuleWide, ConvexHull, ConvexHullWide, CollisionPair, ConvexPairWide<Capsule, CapsuleWide, ConvexHull, ConvexHullWide>, Convex2ContactManifoldWide, CapsuleConvexHullTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule, Compound, ConvexCompoundOverlapFinder<Capsule, CapsuleWide, Compound>, ConvexCompoundContinuations<Compound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule, BigCompound, ConvexCompoundOverlapFinder<Capsule, CapsuleWide, BigCompound>, ConvexCompoundContinuations<BigCompound>, NonconvexReduction>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule, Rectangle, ConvexCompoundOverlapFinder<Capsule, CapsuleWide, Rectangle>, ConvexMeshContinuations<Rectangle>, MeshReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule, Mesh, ConvexCompoundOverlapFinder<Capsule, CapsuleWide, Mesh>, ConvexMeshContinuations<Mesh>, MeshReduction>());
 
             defaultTaskRegistry.Register(new ConvexCollisionTask<Box, BoxWide, Box, BoxWide, FliplessPair, FliplessPairWide<Box, BoxWide>, Convex4ContactManifoldWide, BoxPairTester>());
@@ -122,10 +122,10 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new ConvexCollisionTask<Box, BoxWide, Cone, ConeWide, CollisionPair, ConvexPairWide<Box, BoxWide, Cone, ConeWide>, Convex4ContactManifoldWide, BoxConeTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Box, BoxWide, Pyramid, PyramidWide, CollisionPair, ConvexPairWide<Box, BoxWide, Pyramid, PyramidWide>, Convex4ContactManifoldWide, BoxPyramidTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Box, BoxWide, Wedge, WedgeWide, CollisionPair, ConvexPairWide<Box, BoxWide, Wedge, WedgeWide>, Convex4ContactManifoldWide, BoxWedgeTester>());
-            defaultTaskRegistry.Register(new ConvexCollisionTask<Box, BoxWide, Rectangle, RectangleWide, CollisionPair, ConvexPairWide<Box, BoxWide, Rectangle, RectangleWide>, Convex4ContactManifoldWide, BoxRectangleTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Box, BoxWide, ConvexHull, ConvexHullWide, CollisionPair, ConvexPairWide<Box, BoxWide, ConvexHull, ConvexHullWide>, Convex4ContactManifoldWide, BoxConvexHullTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Box, Compound, ConvexCompoundOverlapFinder<Box, BoxWide, Compound>, ConvexCompoundContinuations<Compound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Box, BigCompound, ConvexCompoundOverlapFinder<Box, BoxWide, BigCompound>, ConvexCompoundContinuations<BigCompound>, NonconvexReduction>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Box, Rectangle, ConvexCompoundOverlapFinder<Box, BoxWide, Rectangle>, ConvexMeshContinuations<Rectangle>, MeshReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Box, Mesh, ConvexCompoundOverlapFinder<Box, BoxWide, Mesh>, ConvexMeshContinuations<Mesh>, MeshReduction>());
 
             defaultTaskRegistry.Register(new ConvexCollisionTask<Triangle, TriangleWide, Triangle, TriangleWide, FliplessPair, FliplessPairWide<Triangle, TriangleWide>, Convex4ContactManifoldWide, TrianglePairTester>());
@@ -133,63 +133,63 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new ConvexCollisionTask<Triangle, TriangleWide, Cone, ConeWide, CollisionPair, ConvexPairWide<Triangle, TriangleWide, Cone, ConeWide>, Convex4ContactManifoldWide, TriangleConeTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Triangle, TriangleWide, Pyramid, PyramidWide, CollisionPair, ConvexPairWide<Triangle, TriangleWide, Pyramid, PyramidWide>, Convex4ContactManifoldWide, TrianglePyramidTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Triangle, TriangleWide, Wedge, WedgeWide, CollisionPair, ConvexPairWide<Triangle, TriangleWide, Wedge, WedgeWide>, Convex4ContactManifoldWide, TriangleWedgeTester>());
-            defaultTaskRegistry.Register(new ConvexCollisionTask<Triangle, TriangleWide, Rectangle, RectangleWide, CollisionPair, ConvexPairWide<Triangle, TriangleWide, Rectangle, RectangleWide>, Convex4ContactManifoldWide, TriangleRectangleTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Triangle, TriangleWide, ConvexHull, ConvexHullWide, CollisionPair, ConvexPairWide<Triangle, TriangleWide, ConvexHull, ConvexHullWide>, Convex4ContactManifoldWide, TriangleConvexHullTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle, Compound, ConvexCompoundOverlapFinder<Triangle, TriangleWide, Compound>, ConvexCompoundContinuations<Compound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle, BigCompound, ConvexCompoundOverlapFinder<Triangle, TriangleWide, BigCompound>, ConvexCompoundContinuations<BigCompound>, NonconvexReduction>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle, Rectangle, ConvexCompoundOverlapFinder<Triangle, TriangleWide, Rectangle>, ConvexMeshContinuations<Rectangle>, MeshReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle, Mesh, ConvexCompoundOverlapFinder<Triangle, TriangleWide, Mesh>, ConvexMeshContinuations<Mesh>, MeshReduction>());
 
             defaultTaskRegistry.Register(new ConvexCollisionTask<Cylinder, CylinderWide, Cylinder, CylinderWide, FliplessPair, FliplessPairWide<Cylinder, CylinderWide>, Convex4ContactManifoldWide, CylinderPairTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Cylinder, CylinderWide, Cone, ConeWide, CollisionPair, ConvexPairWide<Cylinder, CylinderWide, Cone, ConeWide>, Convex4ContactManifoldWide, CylinderConeTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Cylinder, CylinderWide, Pyramid, PyramidWide, CollisionPair, ConvexPairWide<Cylinder, CylinderWide, Pyramid, PyramidWide>, Convex4ContactManifoldWide, CylinderPyramidTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Cylinder, CylinderWide, Wedge, WedgeWide, CollisionPair, ConvexPairWide<Cylinder, CylinderWide, Wedge, WedgeWide>, Convex4ContactManifoldWide, CylinderWedgeTester>());
-            defaultTaskRegistry.Register(new ConvexCollisionTask<Cylinder, CylinderWide, Rectangle, RectangleWide, CollisionPair, ConvexPairWide<Cylinder, CylinderWide, Rectangle, RectangleWide>, Convex4ContactManifoldWide, CylinderRectangleTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Cylinder, CylinderWide, ConvexHull, ConvexHullWide, CollisionPair, ConvexPairWide<Cylinder, CylinderWide, ConvexHull, ConvexHullWide>, Convex4ContactManifoldWide, CylinderConvexHullTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Cylinder, Compound, ConvexCompoundOverlapFinder<Cylinder, CylinderWide, Compound>, ConvexCompoundContinuations<Compound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Cylinder, BigCompound, ConvexCompoundOverlapFinder<Cylinder, CylinderWide, BigCompound>, ConvexCompoundContinuations<BigCompound>, NonconvexReduction>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Cylinder, Rectangle, ConvexCompoundOverlapFinder<Cylinder, CylinderWide, Rectangle>, ConvexMeshContinuations<Rectangle>, MeshReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Cylinder, Mesh, ConvexCompoundOverlapFinder<Cylinder, CylinderWide, Mesh>, ConvexMeshContinuations<Mesh>, MeshReduction>());
 
             defaultTaskRegistry.Register(new ConvexCollisionTask<Cone, ConeWide, Cone, ConeWide, FliplessPair, FliplessPairWide<Cone, ConeWide>, Convex4ContactManifoldWide, ConePairTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Cone, ConeWide, Pyramid, PyramidWide, CollisionPair, ConvexPairWide<Cone, ConeWide, Pyramid, PyramidWide>, Convex4ContactManifoldWide, ConePyramidTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Cone, ConeWide, Wedge, WedgeWide, CollisionPair, ConvexPairWide<Cone, ConeWide, Wedge, WedgeWide>, Convex4ContactManifoldWide, ConeWedgeTester>());
-            defaultTaskRegistry.Register(new ConvexCollisionTask<Cone, ConeWide, Rectangle, RectangleWide, CollisionPair, ConvexPairWide<Cone, ConeWide, Rectangle, RectangleWide>, Convex4ContactManifoldWide, ConeRectangleTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Cone, ConeWide, ConvexHull, ConvexHullWide, CollisionPair, ConvexPairWide<Cone, ConeWide, ConvexHull, ConvexHullWide>, Convex4ContactManifoldWide, ConeConvexHullTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Cone, Compound, ConvexCompoundOverlapFinder<Cone, ConeWide, Compound>, ConvexCompoundContinuations<Compound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Cone, BigCompound, ConvexCompoundOverlapFinder<Cone, ConeWide, BigCompound>, ConvexCompoundContinuations<BigCompound>, NonconvexReduction>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Cone, Rectangle, ConvexCompoundOverlapFinder<Cone, ConeWide, Rectangle>, ConvexMeshContinuations<Rectangle>, MeshReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Cone, Mesh, ConvexCompoundOverlapFinder<Cone, ConeWide, Mesh>, ConvexMeshContinuations<Mesh>, MeshReduction>());
 
             defaultTaskRegistry.Register(new ConvexCollisionTask<Pyramid, PyramidWide, Pyramid, PyramidWide, FliplessPair, FliplessPairWide<Pyramid, PyramidWide>, Convex4ContactManifoldWide, PyramidPairTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Pyramid, PyramidWide, Wedge, WedgeWide, CollisionPair, ConvexPairWide<Pyramid, PyramidWide, Wedge, WedgeWide>, Convex4ContactManifoldWide, PyramidWedgeTester>());
-            defaultTaskRegistry.Register(new ConvexCollisionTask<Pyramid, PyramidWide, Rectangle, RectangleWide, CollisionPair, ConvexPairWide<Pyramid, PyramidWide, Rectangle, RectangleWide>, Convex4ContactManifoldWide, PyramidRectangleTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Pyramid, PyramidWide, ConvexHull, ConvexHullWide, CollisionPair, ConvexPairWide<Pyramid, PyramidWide, ConvexHull, ConvexHullWide>, Convex4ContactManifoldWide, PyramidConvexHullTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Pyramid, Compound, ConvexCompoundOverlapFinder<Pyramid, PyramidWide, Compound>, ConvexCompoundContinuations<Compound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Pyramid, BigCompound, ConvexCompoundOverlapFinder<Pyramid, PyramidWide, BigCompound>, ConvexCompoundContinuations<BigCompound>, NonconvexReduction>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Pyramid, Rectangle, ConvexCompoundOverlapFinder<Pyramid, PyramidWide, Rectangle>, ConvexMeshContinuations<Rectangle>, MeshReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Pyramid, Mesh, ConvexCompoundOverlapFinder<Pyramid, PyramidWide, Mesh>, ConvexMeshContinuations<Mesh>, MeshReduction>());
 
             defaultTaskRegistry.Register(new ConvexCollisionTask<Wedge, WedgeWide, Wedge, WedgeWide, FliplessPair, FliplessPairWide<Wedge, WedgeWide>, Convex4ContactManifoldWide, WedgePairTester>());
-            defaultTaskRegistry.Register(new ConvexCollisionTask<Wedge, WedgeWide, Rectangle, RectangleWide, CollisionPair, ConvexPairWide<Wedge, WedgeWide, Rectangle, RectangleWide>, Convex4ContactManifoldWide, WedgeRectangleTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Wedge, WedgeWide, ConvexHull, ConvexHullWide, CollisionPair, ConvexPairWide<Wedge, WedgeWide, ConvexHull, ConvexHullWide>, Convex4ContactManifoldWide, WedgeConvexHullTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Wedge, Compound, ConvexCompoundOverlapFinder<Wedge, WedgeWide, Compound>, ConvexCompoundContinuations<Compound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Wedge, BigCompound, ConvexCompoundOverlapFinder<Wedge, WedgeWide, BigCompound>, ConvexCompoundContinuations<BigCompound>, NonconvexReduction>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Wedge, Rectangle, ConvexCompoundOverlapFinder<Wedge, WedgeWide, Rectangle>, ConvexMeshContinuations<Rectangle>, MeshReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Wedge, Mesh, ConvexCompoundOverlapFinder<Wedge, WedgeWide, Mesh>, ConvexMeshContinuations<Mesh>, MeshReduction>());
-
-            defaultTaskRegistry.Register(new ConvexCollisionTask<Rectangle, RectangleWide, Rectangle, RectangleWide, FliplessPair, FliplessPairWide<Rectangle, RectangleWide>, Convex4ContactManifoldWide, RectanglePairTester>());
-            defaultTaskRegistry.Register(new ConvexCollisionTask<Rectangle, RectangleWide, ConvexHull, ConvexHullWide, CollisionPair, ConvexPairWide<Rectangle, RectangleWide, ConvexHull, ConvexHullWide>, Convex4ContactManifoldWide, RectangleConvexHullTester>());
-            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Rectangle, Compound, ConvexCompoundOverlapFinder<Rectangle, RectangleWide, Compound>, ConvexCompoundContinuations<Compound>, NonconvexReduction>());
-            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Rectangle, BigCompound, ConvexCompoundOverlapFinder<Rectangle, RectangleWide, BigCompound>, ConvexCompoundContinuations<BigCompound>, NonconvexReduction>());
-            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Rectangle, Mesh, ConvexCompoundOverlapFinder<Rectangle, RectangleWide, Mesh>, ConvexMeshContinuations<Mesh>, MeshReduction>());
 
             defaultTaskRegistry.Register(new ConvexCollisionTask<ConvexHull, ConvexHullWide, ConvexHull, ConvexHullWide, FliplessPair, FliplessPairWide<ConvexHull, ConvexHullWide>, Convex4ContactManifoldWide, ConvexHullPairTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<ConvexHull, Compound, ConvexCompoundOverlapFinder<ConvexHull, ConvexHullWide, Compound>, ConvexCompoundContinuations<Compound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<ConvexHull, BigCompound, ConvexCompoundOverlapFinder<ConvexHull, ConvexHullWide, BigCompound>, ConvexCompoundContinuations<BigCompound>, NonconvexReduction>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<ConvexHull, Rectangle, ConvexCompoundOverlapFinder<ConvexHull, ConvexHullWide, Rectangle>, ConvexMeshContinuations<Rectangle>, MeshReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<ConvexHull, Mesh, ConvexCompoundOverlapFinder<ConvexHull, ConvexHullWide, Mesh>, ConvexMeshContinuations<Mesh>, MeshReduction>());
 
             defaultTaskRegistry.Register(new CompoundPairCollisionTask<Compound, Compound, CompoundPairOverlapFinder<Compound, Compound>, CompoundPairContinuations<Compound, Compound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new CompoundPairCollisionTask<Compound, BigCompound, CompoundPairOverlapFinder<Compound, BigCompound>, CompoundPairContinuations<Compound, BigCompound>, NonconvexReduction>());
+            defaultTaskRegistry.Register(new CompoundPairCollisionTask<Compound, Rectangle, CompoundPairOverlapFinder<Compound, Rectangle>, CompoundMeshContinuations<Compound, Rectangle>, CompoundMeshReduction>());
             defaultTaskRegistry.Register(new CompoundPairCollisionTask<Compound, Mesh, CompoundPairOverlapFinder<Compound, Mesh>, CompoundMeshContinuations<Compound, Mesh>, CompoundMeshReduction>());
 
             defaultTaskRegistry.Register(new CompoundPairCollisionTask<BigCompound, BigCompound, CompoundPairOverlapFinder<BigCompound, BigCompound>, CompoundPairContinuations<BigCompound, BigCompound>, NonconvexReduction>());
+            defaultTaskRegistry.Register(new CompoundPairCollisionTask<BigCompound, Rectangle, CompoundPairOverlapFinder<BigCompound, Rectangle>, CompoundMeshContinuations<BigCompound, Rectangle>, CompoundMeshReduction>());
             defaultTaskRegistry.Register(new CompoundPairCollisionTask<BigCompound, Mesh, CompoundPairOverlapFinder<BigCompound, Mesh>, CompoundMeshContinuations<BigCompound, Mesh>, CompoundMeshReduction>());
+
+            defaultTaskRegistry.Register(new CompoundPairCollisionTask<Rectangle, Rectangle, MeshPairOverlapFinder<Rectangle, Rectangle>, MeshPairContinuations<Rectangle, Rectangle>, CompoundMeshReduction>());
+            defaultTaskRegistry.Register(new CompoundPairCollisionTask<Rectangle, Mesh, MeshPairOverlapFinder<Rectangle, Mesh>, MeshPairContinuations<Rectangle, Mesh>, CompoundMeshReduction>());
 
             defaultTaskRegistry.Register(new CompoundPairCollisionTask<Mesh, Mesh, MeshPairOverlapFinder<Mesh, Mesh>, MeshPairContinuations<Mesh, Mesh>, CompoundMeshReduction>());
 
