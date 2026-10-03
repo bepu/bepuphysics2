@@ -15,10 +15,30 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
     public unsafe interface IBoundsQueryableCompound
     {
+        /// <summary>
+        /// Finds, for each query, the child indices whose local-space bounding boxes overlap its bounds.
+        /// </summary>
+        /// <typeparam name="TOverlaps">Type of the collection that stores overlap results for each pair.</typeparam>
+        /// <typeparam name="TSubpairOverlaps">Type of the per-pair collection that receives matching child indices.</typeparam>
+        /// <param name="pairs">Buffer of queries, each identifying a compound and bounds in that compound's local space.</param>
+        /// <param name="pool">Pool used for any temporary allocations during traversal.</param>
+        /// <param name="shapes">Shape collection used to look up child bounds for compounds with heterogeneous children. May be null for homogeneous compounds that don't require it.</param>
+        /// <param name="overlaps">Collection that receives the indices of overlapping children.</param>
         void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps;
 
+        /// <summary>
+        /// Finds the indices of children whose local-space bounding boxes intersect the query AABB swept along the given direction.
+        /// </summary>
+        /// <typeparam name="TOverlaps">Type of the overlap collection that receives matching child indices.</typeparam>
+        /// <param name="min">Minimum corner of the query AABB in the compound's local space.</param>
+        /// <param name="max">Maximum corner of the query AABB in the compound's local space.</param>
+        /// <param name="sweep">Direction along which to sweep the query AABB.</param>
+        /// <param name="maximumT">Maximum parametric distance along the sweep direction to test.</param>
+        /// <param name="pool">Pool used for any temporary allocations during traversal.</param>
+        /// <param name="shapes">Shape collection used to look up child bounds for compounds with heterogeneous children. May be null for homogeneous compounds that don't require it.</param>
+        /// <param name="overlaps">Collection that receives the indices of overlapping children.</param>
         void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps;
 
