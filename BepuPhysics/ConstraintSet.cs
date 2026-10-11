@@ -36,7 +36,7 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Gets the total number of bundles across all types and batches.
+        /// Gets the total number of constraints across all types and batches.
         /// </summary>
         public int ConstraintCount
         {
@@ -48,7 +48,7 @@ namespace BepuPhysics
                     ref var batch = ref Batches[i];
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
                     {
-                        count += batch.TypeBatches[j].BundleCount;
+                        count += batch.TypeBatches[j].ConstraintCount;
                     }
                 }
                 return count;

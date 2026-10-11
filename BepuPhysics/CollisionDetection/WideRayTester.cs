@@ -42,6 +42,7 @@ namespace BepuPhysics.CollisionDetection
                             rayHitHandler.OnRayHit(*ray, ref *maximumT, t, normal, 0);
                         }
                     }
+                    break;
                 }
                 else
                 {

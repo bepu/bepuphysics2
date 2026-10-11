@@ -169,7 +169,7 @@ namespace BepuPhysics.CollisionDetection
             for (int i = 0; i < newSize; ++i)
             {
                 Array.Resize(ref topLevelMatrix[i], newSize);
-                for (int j = oldSize; j < newSize; ++j)
+                for (int j = i < oldSize ? oldSize : 0; j < newSize; ++j)
                 {
                     topLevelMatrix[i][j] = new CollisionTaskReference { TaskIndex = -1 };
                 }

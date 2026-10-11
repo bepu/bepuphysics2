@@ -446,7 +446,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AddAndReplace(T element, IUnmanagedMemoryPool pool)
         {
-            return AddAndReplaceUnsafely(ref element);
+            return AddAndReplace(ref element, pool);
         }
 
 

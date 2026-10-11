@@ -554,14 +554,14 @@ namespace BepuPhysics.Trees
 
             //Go ahead and submit very large early nodes as independent tasks to help with load balancing.
             //(This isn't guaranteed, or even intended, to catch all large individual nodes. It's just an easy way to get some of them.)
-            var earlyIsolatedNodeIntervalEnd = 0;
             const int maximumIsolatedNodeCapacity = 32;
             int isolatedNodeCapacity = int.Min(maximumIsolatedNodeCapacity, targetTaskBudget / 4);
             var earlyIsolatedNodesMemory = stackalloc int[isolatedNodeCapacity];
             var earlyIsolatedNodes = new QuickList<int>(new Buffer<int>(earlyIsolatedNodesMemory, isolatedNodeCapacity));
-            for (int i = 0; i < NodeCount && earlyIsolatedNodes.Count < isolatedNodeCapacity; ++i)
+            int nodeIndex = 0;
+            for (; nodeIndex < NodeCount && earlyIsolatedNodes.Count < isolatedNodeCapacity; ++nodeIndex)
             {
-                ref var node = ref Nodes[i];
+                ref var node = ref Nodes[nodeIndex];
                 ref var a = ref node.A;
                 ref var b = ref node.B;
                 if (int.Max(a.LeafCount, b.LeafCount) > leafThresholdForTask)
@@ -569,15 +569,16 @@ namespace BepuPhysics.Trees
                     if (BoundingBox.IntersectsUnsafe(a, b))
                     {
                         //Note that this technically does double work on the bounds test with the way we're submitting this as a task. Don't care; it's constant bounded nanoseconds.
-                        earlyIsolatedNodes.AllocateUnsafely() = i;
+                        earlyIsolatedNodes.AllocateUnsafely() = nodeIndex;
                     }
                 }
                 else
                 {
-                    earlyIsolatedNodeIntervalEnd = i;
                     break;
                 }
             }
+            //Regardless of why the loop stopped (capacity, node count, or a small node), everything before nodeIndex has been handled as isolated nodes.
+            var earlyIsolatedNodeIntervalEnd = nodeIndex;
 
             var remainingNodeCount = NodeCount - earlyIsolatedNodeIntervalEnd;
             var regularLoopTaskCount = targetTaskBudget - earlyIsolatedNodes.Count;

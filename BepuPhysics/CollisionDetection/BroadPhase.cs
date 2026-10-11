@@ -425,11 +425,11 @@ namespace BepuPhysics.CollisionDetection
             }
             else
             {
-                StaticTree.Refine2(staticRootRefinementSize, ref staticSubtreeRefinementStartIndex, staticSubtreeRefinementCount, staticSubtreeRefinementSize, Pool);
+                StaticTree.Refine2(staticRootRefinementSize, ref staticSubtreeRefinementStartIndex, staticSubtreeRefinementCount, staticSubtreeRefinementSize, Pool, usePriorityQueue: usePriorityQueueStatic);
                 //Note we refine *before* refitting. This means the refinement is working with slightly out of date data, but that's okay, the entire point is incremental refinement.
                 //The reason to prefer this is that refining scrambles the memory layout a little bit.
                 //Refit with cache optimization *after* refinement ensures the rest of the library (and the user) sees the cache optimized version.
-                ActiveTree.Refine2(activeRootRefinementSize, ref activeSubtreeRefinementStartIndex, activeSubtreeRefinementCount, activeSubtreeRefinementSize, Pool);
+                ActiveTree.Refine2(activeRootRefinementSize, ref activeSubtreeRefinementStartIndex, activeSubtreeRefinementCount, activeSubtreeRefinementSize, Pool, usePriorityQueue: usePriorityQueueActive);
                 ActiveTree.Refit2WithCacheOptimization(Pool);
             }
             if (frameIndex == int.MaxValue)
