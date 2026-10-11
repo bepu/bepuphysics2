@@ -26,7 +26,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(boundingPlaneBundle.Normal, slotClosestOnHull, out var closestOnHullDot);
             //Note that we primarily search to minimize plane error. Even if it doesn't have great normal alignment, we must terminate with some valid result.
             //(It's numerically possible, though rare, for the bounding plane epsilon to fail to match any face, so we use the minimal error in that case.)
-            var bestPlaneErrorBundle = Vector.Abs(closestOnHullDot - boundingPlaneBundle.Offset);
+            //Faces nearly perpendicular to (or facing away from) the contact normal are never eligible, though. Callers divide by dot(faceNormal, contactNormal),
+            //so picking one yields infinite or NaN depths. That happens when the closest point lies exactly on such a face's plane:
+            //for example, two hulls resting at the same height with coplanar top faces, in contact along a horizontal normal.
+            var minimumFaceDot = new Vector<float>(1e-2f);
+            var ineligibleError = new Vector<float>(float.MaxValue);
+            var bestPlaneErrorBundle = Vector.ConditionalSelect(Vector.GreaterThan(bestFaceDotBundle, minimumFaceDot), Vector.Abs(closestOnHullDot - boundingPlaneBundle.Offset), ineligibleError);
             var bestIndices = slotOffsetIndices;
             for (int i = 1; i < hull.BoundingPlanes.Length; ++i)
             {
@@ -36,7 +41,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 boundingPlaneBundle = ref hull.BoundingPlanes[i];
                 Vector3Wide.Dot(boundingPlaneBundle.Normal, slotLocalNormalBundle, out var dot);
                 Vector3Wide.Dot(boundingPlaneBundle.Normal, slotClosestOnHull, out closestOnHullDot);
-                var candidateError = Vector.Abs(closestOnHullDot - boundingPlaneBundle.Offset);
+                var candidateError = Vector.ConditionalSelect(Vector.GreaterThan(dot, minimumFaceDot), Vector.Abs(closestOnHullDot - boundingPlaneBundle.Offset), ineligibleError);
                 var errorImprovement = bestPlaneErrorBundle - candidateError;
                 var useCandidate = Vector.BitwiseOr(
                     //If the plane error improvement is significant, use it.
