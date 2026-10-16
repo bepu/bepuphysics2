@@ -1,12 +1,13 @@
 ﻿using DemoContentLoader;
 using DemoRenderer;
+using Demos.Broken;
 using Demos.Demos;
 using Demos.Demos.Cars;
 using Demos.Demos.Characters;
 using Demos.Demos.Dancers;
 using Demos.Demos.Sponsors;
 using Demos.Demos.Tanks;
-using Demos.SpecializedTests;
+using Demos.FC;
 using System;
 using System.Collections.Generic;
 
@@ -44,6 +45,9 @@ public class DemoSet
 
     public DemoSet()
     {
+
+        AddOption<CompoundFallsThroughFloor>();
+        AddOption<FcDemo>();
         AddOption<CarDemo>();
         AddOption<TankDemo>();
         AddOption<CharacterDemo>();
