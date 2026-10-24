@@ -32,7 +32,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     offsetB, orientationB, velocityB, maximumT, out var sweep, out var min, out var max);
                 ref var childOverlaps = ref overlaps.GetOverlapsForChild(i);
                 childOverlaps.ChildIndex = i;
-                compoundB.FindLocalOverlaps<ChildOverlapsCollection>(min, max, sweep, maximumT, pool, shapes, Unsafe.AsPointer(ref childOverlaps));
+                //The sweep is already the displacement over maximumT, so the overlap query's ray covers it at t = 1. Passing maximumT would scale the displacement by maximumT again.
+                compoundB.FindLocalOverlaps<ChildOverlapsCollection>(min, max, sweep, 1, pool, shapes, Unsafe.AsPointer(ref childOverlaps));
             }
         }
     }
