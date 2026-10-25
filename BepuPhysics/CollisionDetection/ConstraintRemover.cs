@@ -380,6 +380,9 @@ namespace BepuPhysics.CollisionDetection
                     for (int j = 0; j < removals.Count; ++j)
                     {
                         ref var target = ref removals[j];
+                        //Kinematics are not tracked by the fallback batch's dynamic constraint counts.
+                        if (!Bodies.IsEncodedDynamicReference(target.EncodedBodyIndex))
+                            continue;
                         if (solver.ActiveSet.SequentialFallback.RemoveOneBodyReferenceFromDynamicsSet(target.EncodedBodyIndex & Bodies.BodyReferenceMask, ref allocationIdsToFree))
                         {
                             //No more constraints for this body in the fallback set; it should not exist in the fallback batch's referenced handles anymore.
