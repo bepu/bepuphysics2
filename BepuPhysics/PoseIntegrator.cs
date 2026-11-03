@@ -336,7 +336,8 @@ namespace BepuPhysics
                 laneIndices = Vector.BitwiseOr(Vector.OnesComplement(integrationMask), laneIndices);
                 var sleepEnergy = velocity.Linear.LengthSquared() + velocity.Angular.LengthSquared();
 
-                //Note that we're not storing out the integrated velocities. The integrated velocities are only used for bounding box prediction.
+                //The integrated velocities are not written back to the bodies; the solver integrates velocity itself. They are stored as predictions so the narrow phase
+                //can expand bounds within pairs (e.g. compound children) using the same velocity as the bounding boxes. Otherwise, the broad phase would find an overlap that the narrow phase would not.
                 if (Vector.LessThanAny(integrationMask, Vector<int>.Zero))
                     Callbacks.IntegrateVelocity(laneIndices, position, orientation, inertia, integrationMask, workerIndex, dtWide, ref velocity);
 
@@ -353,6 +354,7 @@ namespace BepuPhysics
                     BodyVelocity bodyVelocity;
                     Vector3Wide.ReadSlot(ref velocity.Linear, i, out bodyVelocity.Linear);
                     Vector3Wide.ReadSlot(ref velocity.Angular, i, out bodyVelocity.Angular);
+                    bodies.PredictedVelocities[bodyIndex] = bodyVelocity;
 
                     //Bounding boxes are accumulated in a scalar fashion, but the actual bounding box calculations are deferred until a sufficient number of collidables are accumulated to make
                     //executing a bundle worthwhile. This does two things: 
@@ -424,6 +426,7 @@ namespace BepuPhysics
         public void PredictBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
+            bodies.EnsurePredictedVelocitiesCapacity();
 
             Callbacks.PrepareForIntegration(dt);
             if (threadDispatcher != null)
@@ -440,6 +443,7 @@ namespace BepuPhysics
                 PredictBoundingBoxes(0, BundleIndexing.GetBundleCount(bodies.ActiveSet.Count), dt, ref boundingBoxUpdater, 0);
                 boundingBoxUpdater.Flush();
             }
+            bodies.PredictedVelocityCount = bodies.ActiveSet.Count;
 
         }
 
