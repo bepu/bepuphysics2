@@ -449,7 +449,7 @@ namespace BepuPhysics.CollisionDetection
                     collidableA.BroadPhaseIndex, collidableB.BroadPhaseIndex,
                     speculativeMargin,
                     ref stateA.Motion.Pose, ref stateB.Motion.Pose,
-                    ref stateA.Motion.Velocity, ref stateB.Motion.Velocity);
+                    ref GetVelocityForCollisionDetection(bodyLocationA, ref stateA), ref GetVelocityForCollisionDetection(bodyLocationB, ref stateB));
             }
             else
             {
@@ -469,9 +469,21 @@ namespace BepuPhysics.CollisionDetection
                     collidableA.BroadPhaseIndex, staticB.BroadPhaseIndex,
                     speculativeMargin,
                     ref stateA.Motion.Pose, ref staticB.Pose,
-                    ref stateA.Motion.Velocity, ref zeroVelocity);
+                    ref GetVelocityForCollisionDetection(bodyLocationA, ref stateA), ref zeroVelocity);
             }
 
+        }
+
+        /// <summary>
+        /// Gets the velocity of a body to use for collision detection. If bounding boxes were predicted with speculatively integrated velocities this frame,
+        /// the predicted velocity is used so that pair-level bounds tests (like compound child overlap finding) match the broad phase bounds.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ref BodyVelocity GetVelocityForCollisionDetection(in BodyMemoryLocation location, ref BodyDynamics state)
+        {
+            if (location.SetIndex == 0 && location.Index < Bodies.PredictedVelocityCount)
+                return ref Bodies.PredictedVelocities[location.Index];
+            return ref state.Motion.Velocity;
         }
 
         struct CCDSweepFilter : ISweepFilter

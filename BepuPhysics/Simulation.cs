@@ -268,6 +268,9 @@ public partial class Simulation : IDisposable
         profiler.Start(NarrowPhase);
         NarrowPhase.Flush(threadDispatcher);
         profiler.End(NarrowPhase);
+
+        //Predicted velocities only exist to keep collision detection consistent with predicted bounding boxes; they're stale beyond this point.
+        Bodies.PredictedVelocityCount = 0;
     }
 
     /// <summary>

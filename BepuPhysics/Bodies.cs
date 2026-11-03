@@ -52,6 +52,18 @@ namespace BepuPhysics
         public unsafe ref BodySet ActiveSet { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return ref *Sets.Memory; } }
 
         /// <summary>
+        /// Velocities of active bodies as predicted by the most recent bounding box prediction, indexed by active body index.
+        /// Velocity integration is deferred to the solver, so these are the velocities used to expand bounding boxes.
+        /// Collision detection must use them too so that the narrow phase's bounds tests (e.g. compound child pairs) agree with the broad phase.
+        /// Only the first <see cref="PredictedVelocityCount"/> entries are valid; the prediction is invalidated whenever the active set is reordered and at the end of collision detection.
+        /// </summary>
+        internal Buffer<BodyVelocity> PredictedVelocities;
+        /// <summary>
+        /// Number of valid entries in <see cref="PredictedVelocities"/>. Zero if no prediction is currently valid.
+        /// </summary>
+        internal int PredictedVelocityCount;
+
+        /// <summary>
         /// Gets a reference to a body in the collection.
         /// </summary>
         /// <param name="handle">Handle of the body to pull a reference for.</param>
@@ -226,6 +238,8 @@ namespace BepuPhysics
                 RemoveCollidableFromBroadPhase(ref collidable);
             }
 
+            //Removal moves a body into the removed slot, so any predicted velocities are no longer aligned with the active set.
+            PredictedVelocityCount = 0;
             var bodyMoved = set.RemoveAt(activeBodyIndex, out var handle, out var movedBodyIndex, out var movedBodyHandle);
             if (bodyMoved)
             {
@@ -821,6 +835,7 @@ namespace BepuPhysics
             }
             Unsafe.InitBlockUnaligned(HandleToLocation.Memory, 0xFF, (uint)(sizeof(BodyMemoryLocation) * HandleToLocation.Length));
             HandlePool.Clear();
+            PredictedVelocityCount = 0;
         }
 
 
@@ -838,6 +853,20 @@ namespace BepuPhysics
                       HandleToLocation.Memory + oldCapacity, 0xFF,
                       (uint)(sizeof(BodyMemoryLocation) * (HandleToLocation.Length - oldCapacity)));
                 }
+            }
+        }
+
+        /// <summary>
+        /// Guarantees that the predicted velocities buffer can hold every active body. Does not preserve existing contents.
+        /// </summary>
+        internal void EnsurePredictedVelocitiesCapacity()
+        {
+            PredictedVelocityCount = 0;
+            if (PredictedVelocities.Length < ActiveSet.Count)
+            {
+                if (PredictedVelocities.Allocated)
+                    Pool.Return(ref PredictedVelocities);
+                Pool.TakeAtLeast(ActiveSet.Count, out PredictedVelocities);
             }
         }
 
@@ -919,6 +948,9 @@ namespace BepuPhysics
             }
             Pool.Return(ref Sets);
             Pool.Return(ref HandleToLocation);
+            if (PredictedVelocities.Allocated)
+                Pool.Return(ref PredictedVelocities);
+            PredictedVelocityCount = 0;
             HandlePool.Dispose(Pool);
         }
 
