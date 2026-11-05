@@ -182,7 +182,7 @@ namespace BepuUtilities.Collections
             //Note that we require the scratch and input spans to contain the offset region. That's because the output could be either the scratch or the input spans.
             Debug.Assert(
                 inputKeys.Length >= startIndex + count && inputValues.Length >= startIndex + count &&
-                inputKeys.Length >= startIndex + count && inputValues.Length >= startIndex + count,
+                scratchKeys.Length >= startIndex + count && scratchValues.Length >= startIndex + count,
                 "The spans must be able to hold the sort region.");
 #if DEBUG
             for (int i = startIndex; i < startIndex + count; ++i)
