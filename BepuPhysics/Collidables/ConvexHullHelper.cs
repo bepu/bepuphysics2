@@ -84,7 +84,7 @@ namespace BepuPhysics.Collidables
     /// <summary>
     /// Helper methods to create and process convex hulls from point clouds.
     /// </summary>
-    public static class ConvexHullHelper
+    public static partial class ConvexHullHelper
     {
         static void FindExtremeFace(
             in Vector3Wide basisX, in Vector3Wide basisY, in Vector3Wide basisOrigin, in EdgeEndpoints sourceEdgeEndpoints, ref Buffer<Vector3Wide> pointBundles, in Vector<int> indexOffsets, Buffer<int> allowVertices, int pointCount,
@@ -594,28 +594,55 @@ namespace BepuPhysics.Collidables
                 FaceIndex = mergedFaceIndex;
             }
         }
+#endif
+
+#if DEBUG_STEPS
         /// <summary>
-        /// Computes the convex hull of a set of points.
+        /// Computes the convex hull of a set of points by gift wrapping, recording its steps for debugging.
         /// </summary>
-        /// <param name="points">Point set to compute the convex hull of.</param>
-        /// <param name="pool">Buffer pool to pull memory from when creating the hull.</param>
-        /// <param name="hullData">Convex hull of the input point set.</param>
-        public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData)
+        public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData, out List<DebugStep> steps)
         {
-            ComputeHull(points, pool, out hullData, out _);
+            ComputeHullGiftWrapping(points, pool, out hullData, out steps);
         }
 #endif
 
         /// <summary>
         /// Computes the convex hull of a set of points.
         /// </summary>
+        /// <remarks>
+        /// Point sets with volume use QuickHull with exact orientation tests: whether a point is in front of a face is
+        /// decided exactly, never within a tolerance, so the hull is closed and convex and holds every point by
+        /// construction. Tolerance-based coplanarity can classify a point near a face's plane as in front of one face and
+        /// behind its neighbour, which leaves the hull open or dented when many points are nearly coplanar. Near-coplanar
+        /// points then become vertices joined by sliver triangles, and the triangles are merged into flat faces: adjacent
+        /// triangles whose vertices all lie within 1e-5 of the point set's size of a face's plane join that face, as long
+        /// as the face's boundary stays a single loop. Flat or collinear point sets fall back to gift wrapping.
+        /// </remarks>
+        /// <param name="points">Point set to compute the convex hull of.</param>
+        /// <param name="pool">Buffer pool to pull memory from when creating the hull.</param>
+        /// <param name="hullData">Convex hull of the input point set.</param>
+        public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData)
+        {
+            if (points.Length > 3 && ExactHull.TryCompute(points, pool, out hullData))
+                return;
+#if DEBUG_STEPS
+            ComputeHullGiftWrapping(points, pool, out hullData, out _);
+#else
+            ComputeHullGiftWrapping(points, pool, out hullData);
+#endif
+        }
+
+        /// <summary>
+        /// Computes the convex hull of a set of points by gift wrapping, with tolerances for coplanar points. ComputeHull
+        /// uses this for point sets with no volume (flat or collinear), and with DEBUG_STEPS for stepping through it.
+        /// </summary>
         /// <param name="points">Point set to compute the convex hull of.</param>
         /// <param name="pool">Buffer pool to pull memory from when creating the hull.</param>
         /// <param name="hullData">Convex hull of the input point set.</param>
 #if DEBUG_STEPS
-        public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData, out List<DebugStep> steps)
+        public static void ComputeHullGiftWrapping(Span<Vector3> points, BufferPool pool, out HullData hullData, out List<DebugStep> steps)
 #else
-        public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData)
+        public static void ComputeHullGiftWrapping(Span<Vector3> points, BufferPool pool, out HullData hullData)
 #endif
         {
 #if DEBUG_STEPS
